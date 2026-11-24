@@ -45,3 +45,158 @@ body,
 .zoom-bar button:hover {
   background: rgba(127, 127, 127, 0.25);
 }
+
+.add-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.add-bar button {
+  padding: 4px 10px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.15);
+  color: inherit;
+  cursor: pointer;
+}
+
+.add-bar button:hover {
+  background: rgba(127, 127, 127, 0.25);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 8px;
+  background: #1c1c1e;
+  color: #ececec;
+  overflow: hidden;
+}
+
+.card.selected {
+  border-color: #5b8def;
+  box-shadow: 0 0 0 1px #5b8def;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(127, 127, 127, 0.12);
+  cursor: grab;
+}
+
+.card-status {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.status-active .card-status { background: #5b8def; }
+.status-running .card-status { background: #34c759; }
+.status-waiting .card-status { background: #ff9f0a; }
+.status-error .card-status { background: #ff453a; }
+
+.card-title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+}
+
+.card-toggle {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 6px;
+}
+
+.note-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.note-toolbar button,
+.kanban-remove {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.note-editor {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 6px;
+}
+
+.note-preview {
+  flex: 1;
+  overflow: auto;
+  cursor: text;
+}
+
+.note-preview :first-child {
+  margin-top: 0;
+}
+
+.kanban-list {
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kanban-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.kanban-item span {
+  flex: 1;
+}
+
+.kanban-item .done {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.kanban-add input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}

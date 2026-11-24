@@ -3,42 +3,66 @@ import {
   Background,
   BackgroundVariant,
   ReactFlow,
-  type Node,
-  useNodesState,
+  type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FIT_PADDING_PX, MAX_ZOOM, MIN_ZOOM } from "./zoom";
+import { useBoardStore } from "./boardStore";
+import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
 import { ZoomBar } from "./ZoomBar";
+import { AddBar } from "./AddBar";
+import { NoteCard } from "./cards/NoteCard";
+import { KanbanCard } from "./cards/KanbanCard";
 
-// Cartes de démonstration pour valider pan, zoom et fit to content (remplacées à l'étape 2).
-const initialNodes: Node[] = [
-  { id: "a", position: { x: 0, y: 0 }, data: { label: "Carte A" } },
-  { id: "b", position: { x: 320, y: 120 }, data: { label: "Carte B" } },
-  { id: "c", position: { x: -260, y: 200 }, data: { label: "Carte C" } },
-];
+const nodeTypes = { note: NoteCard, kanban: KanbanCard } satisfies NodeTypes;
+
+function isEditable(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+  );
+}
 
 export function Board() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const nodes = useBoardStore((s) => s.nodes);
+  const onNodesChange = useBoardStore((s) => s.onNodesChange);
+  const checkpoint = useBoardStore((s) => s.checkpoint);
   const [spacePressed, setSpacePressed] = useState(false);
 
   useEffect(() => {
-    const isEditable = (target: EventTarget | null) =>
-      target instanceof HTMLElement &&
-      (target.isContentEditable || ["INPUT", "TEXTAREA"].includes(target.tagName));
-    const down = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !isEditable(e.target)) {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditable(e.target)) return;
+      const store = useBoardStore.getState();
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+
+      if (e.code === "Space") {
         e.preventDefault();
         setSpacePressed(true);
+      } else if (mod && key === "c") {
+        store.copySelected();
+      } else if (mod && key === "v") {
+        store.paste();
+      } else if (mod && (key === "y" || (key === "z" && e.shiftKey))) {
+        store.redo();
+      } else if (mod && key === "z") {
+        store.undo();
+      } else if (e.key === "Delete") {
+        store.deleteSelected();
+      } else if (e.key === "Escape") {
+        store.clearSelection();
+      } else {
+        return;
       }
+      e.preventDefault();
     };
-    const up = (e: KeyboardEvent) => {
+    const onKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") setSpacePressed(false);
     };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
   }, []);
 
@@ -46,16 +70,20 @@ export function Board() {
     <ReactFlow
       nodes={nodes}
       edges={[]}
+      nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
+      onNodeDragStart={checkpoint}
+      deleteKeyCode={null}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       fitView
-      fitViewOptions={{ padding: FIT_PADDING_PX }}
+      fitViewOptions={{ padding: 80 }}
       selectionOnDrag={!spacePressed}
       panOnDrag={spacePressed ? true : [1]}
       proOptions={{ hideAttribution: true }}
     >
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+      <AddBar />
       <ZoomBar />
     </ReactFlow>
   );

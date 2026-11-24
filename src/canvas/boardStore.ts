@@ -1,0 +1,131 @@
+import { create } from "zustand";
+import type { NodeChangeset, XYPosition } from "@xyflow/react";
+import type { BoardNode, CardType } from "./types";
+
+const HISTORY_LIMIT = 100;
+const PASTE_OFFSET = 40;
+
+export function createCard(type: CardType, position: XYPosition): BoardNode {
+  const base = { id: crypto.randomUUID(), type, position, selected: false };
+  if (type === "note") {
+    return {
+      ...base,
+      width: 280,
+      height: 200,
+      data: { title: "Note", status: "idle", collapsed: false, body: "" },
+    };
+  }
+  return {
+    ...base,
+    width: 280,
+    height: 260,
+    data: { title: "Kanban", status: "idle", collapsed: false, items: [] },
+  };
+}
+
+function seedNodes(): BoardNode[] {
+  const note = createCard("note", { x: 0, y: 0 });
+  note.data = { ...note.data, title: "Bienvenue", body: "# Spatial Agent Board\n\nGlisse, zoome, ajoute des cartes." };
+  const kanban = createCard("kanban", { x: 340, y: 0 });
+  kanban.data = {
+    ...kanban.data,
+    title: "Tâches",
+    items: [{ id: crypto.randomUUID(), text: "Socle canvas", done: true }],
+  };
+  return [note, kanban];
+}
+
+export interface BoardState {
+  nodes: BoardNode[];
+  past: BoardNode[][];
+  future: BoardNode[][];
+  clipboard: BoardNode[];
+  onNodesChange: (changes: NodeChangeset<BoardNode>) => void;
+  checkpoint: () => void;
+  addCard: (type: CardType, position: XYPosition) => void;
+  updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
+  deleteSelected: () => void;
+  clearSelection: () => void;
+  copySelected: () => void;
+  paste: () => void;
+  undo: () => void;
+  redo: () => void;
+}
+
+export const useBoardStore = create<BoardState>()((set, get) => ({
+  nodes: seedNodes(),
+  past: [],
+  future: [],
+  clipboard: [],
+
+  onNodesChange: (changes) => set({ nodes: changes.applyTo(get().nodes) }),
+
+  // Appelé avant une modification structurelle (ajout, suppression, déplacement, redimensionnement).
+  // L'édition de texte dans une carte ne passe pas par l'historique.
+  checkpoint: () =>
+    set((s) => ({ past: [...s.past, s.nodes].slice(-HISTORY_LIMIT), future: [] })),
+
+  addCard: (type, position) => {
+    get().checkpoint();
+    set((s) => ({
+      nodes: [
+        ...s.nodes.map((n) => ({ ...n, selected: false })),
+        { ...createCard(type, position), selected: true },
+      ],
+    }));
+  },
+
+  updateCard: (id, patch) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)),
+    })),
+
+  clearSelection: () => set((s) => ({ nodes: s.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)) })),
+
+  deleteSelected: () => {
+    if (!get().nodes.some((n) => n.selected)) return;
+    get().checkpoint();
+    set((s) => ({ nodes: s.nodes.filter((n) => !n.selected) }));
+  },
+
+  copySelected: () => {
+    set((s) => ({
+      clipboard: structuredClone(s.nodes.filter((n) => n.selected)),
+    }));
+  },
+
+  paste: () => {
+    const { clipboard } = get();
+    if (clipboard.length === 0) return;
+    get().checkpoint();
+    const pasted = clipboard.map((n) => ({
+      ...structuredClone(n),
+      id: crypto.randomUUID(),
+      position: { x: n.position.x + PASTE_OFFSET, y: n.position.y + PASTE_OFFSET },
+      selected: true,
+    }));
+    set((s) => ({
+      nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), ...pasted],
+    }));
+  },
+
+  undo: () => {
+    const { past, nodes, future } = get();
+    if (past.length === 0) return;
+    set({
+      nodes: past[past.length - 1],
+      past: past.slice(0, -1),
+      future: [nodes, ...future],
+    });
+  },
+
+  redo: () => {
+    const { past, nodes, future } = get();
+    if (future.length === 0) return;
+    set({
+      nodes: future[0],
+      past: [...past, nodes],
+      future: future.slice(1),
+    });
+  },
+}));
