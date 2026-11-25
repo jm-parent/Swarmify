@@ -12,7 +12,7 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
       ...base,
       width: 280,
       height: 200,
-      data: { title: "Note", status: "idle", collapsed: false, body: "" },
+      data: { title: "Note", status: "idle", body: "" },
     };
   }
   if (type === "agent") {
@@ -23,7 +23,6 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
       data: {
         title: "Agent",
         status: "idle",
-        collapsed: false,
         terminal: { shell: "powershell", preset: "copilot", cwd: "", sessionId: crypto.randomUUID() },
       },
     };
@@ -32,7 +31,7 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
     ...base,
     width: 280,
     height: 260,
-    data: { title: "Kanban", status: "idle", collapsed: false, items: [] },
+    data: { title: "Kanban", status: "idle", items: [] },
   };
 }
 
@@ -58,6 +57,7 @@ export interface BoardState {
   addCard: (type: CardType, position: XYPosition) => string;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
+  removeCard: (id: string) => void;
   clearSelection: () => void;
   copySelected: () => void;
   paste: () => void;
@@ -98,6 +98,11 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     if (!get().nodes.some((n) => n.selected)) return;
     get().checkpoint();
     set((s) => ({ nodes: s.nodes.filter((n) => !n.selected) }));
+  },
+
+  removeCard: (id) => {
+    get().checkpoint();
+    set((s) => ({ nodes: s.nodes.filter((n) => n.id !== id) }));
   },
 
   copySelected: () => {

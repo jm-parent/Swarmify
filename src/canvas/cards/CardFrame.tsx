@@ -7,22 +7,19 @@ interface CardFrameProps {
   id: string;
   data: CardData;
   selected: boolean;
+  // Bouton d'action placé à droite de l'en-tête (ex. fermer une session).
+  headerAction?: ReactNode;
   children: ReactNode;
 }
 
-// Cadre commun à tous les types de cartes : titre, statut, réduction, redimensionnement.
-export function CardFrame({ id, data, selected, children }: CardFrameProps) {
+// Cadre commun à tous les types de cartes : titre, statut, redimensionnement.
+export function CardFrame({ id, data, selected, headerAction, children }: CardFrameProps) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const checkpoint = useBoardStore((s) => s.checkpoint);
 
   return (
     <div className={`card status-${data.status}${selected ? " selected" : ""}`}>
-      <NodeResizer
-        isVisible={selected}
-        minWidth={180}
-        minHeight={data.collapsed ? 36 : 120}
-        onResizeStart={checkpoint}
-      />
+      <NodeResizer isVisible={selected} minWidth={180} minHeight={120} onResizeStart={checkpoint} />
       <div className="card-header">
         <span className="card-status" aria-label={data.status} />
         <input
@@ -30,16 +27,9 @@ export function CardFrame({ id, data, selected, children }: CardFrameProps) {
           value={data.title}
           onChange={(e) => updateCard(id, { title: e.currentTarget.value })}
         />
-        <button
-          type="button"
-          className="nodrag card-toggle"
-          aria-label={data.collapsed ? "Déplier" : "Replier"}
-          onClick={() => updateCard(id, { collapsed: !data.collapsed })}
-        >
-          {data.collapsed ? "▸" : "▾"}
-        </button>
+        {headerAction}
       </div>
-      {!data.collapsed && <div className="card-body">{children}</div>}
+      <div className="card-body">{children}</div>
     </div>
   );
 }

@@ -6,8 +6,8 @@ const { getState, setState } = useBoardStore;
 function seedNodes() {
   setState({
     nodes: [
-      { id: "n1", type: "note", position: { x: 0, y: 0 }, data: { title: "A", status: "idle", collapsed: false, body: "" }, selected: true },
-      { id: "n2", type: "note", position: { x: 300, y: 0 }, data: { title: "B", status: "idle", collapsed: false, body: "" }, selected: false },
+      { id: "n1", type: "note", position: { x: 0, y: 0 }, data: { title: "A", status: "idle", body: "" }, selected: true },
+      { id: "n2", type: "note", position: { x: 300, y: 0 }, data: { title: "B", status: "idle", body: "" }, selected: false },
     ],
     past: [],
     future: [],

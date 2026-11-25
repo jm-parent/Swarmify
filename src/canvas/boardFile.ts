@@ -33,7 +33,6 @@ export function parseBoard(text: string): BoardNode[] {
       typeof raw.position?.y === "number" &&
       typeof raw.data?.title === "string" &&
       CARD_STATUSES.includes(raw.data?.status) &&
-      typeof raw.data?.collapsed === "boolean" &&
       (raw.type !== "agent" || typeof raw.data?.terminal?.sessionId === "string");
     if (!valid) throw new Error("Fichier de board invalide.");
     // Aucun processus ne survit à la fermeture de l'app : un statut d'exécution restauré devient « idle ».

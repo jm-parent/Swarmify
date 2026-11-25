@@ -12,7 +12,6 @@ const node: BoardNode = {
   data: {
     title: "Tâches",
     status: "idle",
-    collapsed: false,
     items: [{ id: "i1", text: "Socle", done: true }],
   },
 };

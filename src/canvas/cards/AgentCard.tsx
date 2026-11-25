@@ -10,6 +10,7 @@ import type { BoardNode } from "../types";
 import { buildLaunch, type AgentPreset, type ShellKind, type TerminalConfig } from "../terminal/launch";
 import { onPtyExit, onPtyOutput, ptyKill, ptyResize, ptySpawn, ptyWrite } from "../terminal/ptyBridge";
 import { PROVIDERS, useCliStatus } from "../providers";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { CardFrame } from "./CardFrame";
 
 const SHELLS: { value: ShellKind; label: string }[] = [
@@ -21,8 +22,10 @@ const SHELLS: { value: ShellKind; label: string }[] = [
 
 export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   const updateCard = useBoardStore((s) => s.updateCard);
+  const removeCard = useBoardStore((s) => s.removeCard);
   const config = data.terminal as TerminalConfig;
   const cliStatus = useCliStatus();
+  const [confirmClose, setConfirmClose] = useState(false);
 
   // Seuls les fournisseurs installés sont proposés ; « Shell seul » est toujours disponible.
   const presetOptions: { value: AgentPreset; label: string }[] = [
@@ -173,8 +176,31 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
     await openPath(folder).catch((err) => setError(String(err)));
   };
 
+  const closeAgent = () => {
+    if (running) setConfirmClose(true);
+    else removeCard(id);
+  };
+
   return (
-    <CardFrame id={id} data={data} selected={selected}>
+    <CardFrame
+      id={id}
+      data={data}
+      selected={selected}
+      headerAction={
+        <button type="button" className="nodrag card-close" aria-label="Fermer la session" title="Fermer la session" onClick={closeAgent}>
+          ×
+        </button>
+      }
+    >
+      {confirmClose && (
+        <ConfirmDialog
+          title="Fermer l'agent ?"
+          message="La session est en cours. Fermer la carte arrête le processus."
+          confirmLabel="Fermer l'agent"
+          onConfirm={() => removeCard(id)}
+          onCancel={() => setConfirmClose(false)}
+        />
+      )}
       <div className="agent-toolbar nodrag">
         <select
           value={config.shell}

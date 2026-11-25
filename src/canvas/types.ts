@@ -13,7 +13,6 @@ export interface KanbanItem {
 export interface CardData extends Record<string, unknown> {
   title: string;
   status: CardStatus;
-  collapsed: boolean;
   body?: string;
   items?: KanbanItem[];
   terminal?: TerminalConfig;
