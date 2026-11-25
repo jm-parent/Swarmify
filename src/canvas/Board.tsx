@@ -12,8 +12,9 @@ import { ZoomBar } from "./ZoomBar";
 import { AddBar } from "./AddBar";
 import { NoteCard } from "./cards/NoteCard";
 import { KanbanCard } from "./cards/KanbanCard";
+import { AgentCard } from "./cards/AgentCard";
 
-const nodeTypes = { note: NoteCard, kanban: KanbanCard } satisfies NodeTypes;
+const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard } satisfies NodeTypes;
 
 function isEditable(target: EventTarget | null) {
   return (

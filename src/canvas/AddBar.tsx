@@ -24,6 +24,7 @@ export function AddBar() {
     <Panel position="top-left" className="add-bar">
       <button type="button" onClick={() => add("note")}>+ Note</button>
       <button type="button" onClick={() => add("kanban")}>+ Kanban</button>
+      <button type="button" onClick={() => add("agent")}>+ Agent</button>
       <button type="button" onClick={() => exportBoard().catch(reportError)}>Exporter</button>
       <button type="button" onClick={() => importBoard().catch(reportError)}>Importer</button>
     </Panel>

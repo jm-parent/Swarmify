@@ -1,6 +1,7 @@
 import type { Node } from "@xyflow/react";
+import type { TerminalConfig } from "./terminal/launch";
 
-export type CardType = "note" | "kanban";
+export type CardType = "note" | "kanban" | "agent";
 export type CardStatus = "idle" | "active" | "running" | "waiting" | "error";
 
 export interface KanbanItem {
@@ -15,6 +16,7 @@ export interface CardData extends Record<string, unknown> {
   collapsed: boolean;
   body?: string;
   items?: KanbanItem[];
+  terminal?: TerminalConfig;
 }
 
 export type BoardNode = Node<CardData, CardType>;

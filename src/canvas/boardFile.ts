@@ -2,7 +2,7 @@ import type { BoardNode, CardStatus } from "./types";
 
 export const BOARD_FILE_VERSION = 1;
 
-const CARD_TYPES = ["note", "kanban"];
+const CARD_TYPES = ["note", "kanban", "agent"];
 const CARD_STATUSES: CardStatus[] = ["idle", "active", "running", "waiting", "error"];
 
 export function serializeBoard(nodes: BoardNode[]): string {
@@ -33,7 +33,8 @@ export function parseBoard(text: string): BoardNode[] {
       typeof raw.position?.y === "number" &&
       typeof raw.data?.title === "string" &&
       CARD_STATUSES.includes(raw.data?.status) &&
-      typeof raw.data?.collapsed === "boolean";
+      typeof raw.data?.collapsed === "boolean" &&
+      (raw.type !== "agent" || typeof raw.data?.terminal?.sessionId === "string");
     if (!valid) throw new Error("Fichier de board invalide.");
     return { ...raw, selected: false } as BoardNode;
   });

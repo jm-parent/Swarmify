@@ -190,6 +190,47 @@ body,
   opacity: 0.6;
 }
 
+.agent-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-toolbar select,
+.agent-toolbar input,
+.agent-toolbar button {
+  padding: 3px 6px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.agent-toolbar .agent-cwd {
+  flex: 1;
+  min-width: 140px;
+}
+
+.agent-toolbar button:disabled,
+.agent-toolbar select:disabled {
+  opacity: 0.5;
+}
+
+.agent-error {
+  color: #ff453a;
+  font-size: 12px;
+}
+
+.terminal-host {
+  flex: 1;
+  min-height: 120px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
 .kanban-add input {
   width: 100%;
   box-sizing: border-box;

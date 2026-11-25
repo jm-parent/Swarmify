@@ -15,6 +15,19 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
       data: { title: "Note", status: "idle", collapsed: false, body: "" },
     };
   }
+  if (type === "agent") {
+    return {
+      ...base,
+      width: 560,
+      height: 380,
+      data: {
+        title: "Agent",
+        status: "idle",
+        collapsed: false,
+        terminal: { shell: "powershell", preset: "claude", cwd: "", sessionId: crypto.randomUUID() },
+      },
+    };
+  }
   return {
     ...base,
     width: 280,
