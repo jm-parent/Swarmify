@@ -3581,7 +3581,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "spatial-agent-board"
+name = "swarmify"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",

@@ -1,4 +1,4 @@
-# Spatial Agent Board
+# Swarmify
 
 Application de bureau Windows qui réunit plusieurs agents IA (Copilot CLI, Claude Code, Codex…) sur un canvas infini, à côté de notes, de tableaux Kanban et de contexte de travail.
 
@@ -15,7 +15,7 @@ Chaque agent tourne dans une carte terminal réelle (PTY). Les CLI sont héberg�
 - **Sauvegarde automatique** du board, restauré au lancement.
 - **Raccourcis Windows** : Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+V / Ctrl+F / Suppr / Échap.
 
-La conception est dans [`docs/superpowers/specs/2026-11-24-spatial-agent-board-design.md`](docs/superpowers/specs/2026-11-24-spatial-agent-board-design.md). Le plan du socle canvas est dans [`docs/superpowers/plans/2026-11-24-canvas-foundation.md`](docs/superpowers/plans/2026-11-24-canvas-foundation.md).
+La conception est dans [`docs/superpowers/specs/2026-11-24-swarmify-design.md`](docs/superpowers/specs/2026-11-24-swarmify-design.md). Le plan du socle canvas est dans [`docs/superpowers/plans/2026-11-24-canvas-foundation.md`](docs/superpowers/plans/2026-11-24-canvas-foundation.md).
 
 ## Prérequis
 
@@ -51,6 +51,10 @@ Lance le serveur Vite et la fenêtre Tauri, avec rechargement à chaud.
 | `npm run dev` | Serveur Vite seul (interface sans Tauri) |
 | `npm run build` | Vérification TypeScript (`tsc`) puis build Vite |
 | `npm test` | Tests unitaires (Vitest) |
+
+## CI
+
+`.github/workflows/ci.yml` : à l'ouverture ou la mise à jour d'une PR, build et tests front (Ubuntu), puis `cargo check --locked` du backend Rust (Windows).
 
 ## Structure
 

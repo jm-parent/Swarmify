@@ -1,4 +1,4 @@
-# Spatial Agent Board (Windows) — Design
+# Swarmify (Windows) — Design
 
 Brouillon de design, à valider avant tout code. Référence fonctionnelle : `Symvibe_inventaire_fonctionnalites.md` (app Mac, à la racine du repo).
 

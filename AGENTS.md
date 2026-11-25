@@ -1,5 +1,9 @@
 # Instructions pour les agents — Swarmify
 
+## Comptes Git
+
+Toute action Git sur ce projet (push, création de PR, etc.) doit être effectuée avec le compte **jm-parent**. Les pushs faits avec le compte `jeanmarie-parent_exakisc` sont refusés (403) sur `jm-parent/Swarmify`.
+
 ## Workflow de développement
 
 Pour toute feature, suivre `docs/dev-workflow.md` et la constitution `.specify/memory/constitution.md`.
@@ -12,4 +16,4 @@ Pour toute feature, suivre `docs/dev-workflow.md` et la constitution `.specify/m
 
 ## Subagents
 
-- Pour les subagents (y compris ceux des workflows Superpowers), utiliser `claude-haiku-5.5` par défaut.
+- Pour les subagents (y compris ceux des workflows Superpowers), utiliser `claude-haiku-5.5` par défaut.
