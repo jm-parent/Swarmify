@@ -7,6 +7,7 @@
     "core:default",
     "opener:default",
     "dialog:default",
+    "clipboard-manager:allow-read-image",
     "allow-load-board",
     "allow-save-board",
     "allow-write-text-file",
