@@ -12,6 +12,7 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 | 4. `/speckit-plan` | SpecKit | `specs/<id>/plan.md` |
 | 5. `/speckit-tasks` | SpecKit | `specs/<id>/tasks.md` |
 | 6. `/speckit-analyze` | SpecKit | rapport de cohérence spec / plan / tâches, à corriger avant exécution |
+| 6b. Cartographie : lire `graphify-out/GRAPH_REPORT.md`, ou `graphify query "<question>"` | graphify | repérer les modules, dépendances et hubs concernés avant de spécifier |
 | 7. Worktree, TDD, exécution par subagents | Superpowers | code et tests, une tâche par subagent |
 | 7b. Passe `impeccable` (si la feature modifie l'interface) | impeccable | critique et polissage de l'UI, avant la revue |
 | 8. Revue de code | Superpowers | liste de points par sévérité |
@@ -23,6 +24,8 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 - Au passage à l'exécution, dire à l'agent : « Le plan est dans `specs/<id>/tasks.md`. Ne pas re-planifier, exécuter. »
 - Ne jamais lancer `/speckit-implement`, ni `specify workflow run` qui l'enchaîne.
 - Si le code diverge de la spec, relancer `/speckit-specify` sur la zone concernée.
+- Cartographie : `graphify-out/graph.json` et `GRAPH_REPORT.md` sont versionnés. Le hook post-commit (`graphify hook install`) les régénère après chaque commit, sans LLM. Après une refonte, lancer `graphify update .` puis committer le graphe mis à jour.
+- Avant de chercher dans le code, consulter le graphe (`graphify query`, `graphify path`, `graphify explain`).
 - Front : toute modification de l'interface (composants, styles, HTML sous `src/`) passe par `impeccable` à l'étape 7b.
 
 ## Calibrage

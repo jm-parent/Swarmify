@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# graphify : seuls le graphe et son rapport sont versionnés
+graphify-out/*
+!graphify-out/graph.json
+!graphify-out/GRAPH_REPORT.md
