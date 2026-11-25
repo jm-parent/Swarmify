@@ -116,7 +116,7 @@ function BoardCanvas() {
         setMenu({ x: e.clientX, y: e.clientY, flow: screenToFlowPosition({ x: e.clientX, y: e.clientY }) });
       }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#2a2a24" />
       <AddBar />
       <ZoomBar />
       {menu && <RadialMenu x={menu.x} y={menu.y} items={menuItems} onClose={closeMenu} />}

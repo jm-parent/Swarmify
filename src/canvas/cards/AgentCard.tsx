@@ -108,7 +108,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
       fontSize: 13,
       cursorBlink: true,
       scrollback: 5000,
-      theme: { background: "#1c1c1e" },
+      theme: { background: "#0c0c08" },
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
