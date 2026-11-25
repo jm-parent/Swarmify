@@ -9,6 +9,7 @@ fn main() {
             "pty_write",
             "pty_resize",
             "pty_kill",
+            "detect_clis",
         ])),
     )
     .expect("échec de la génération des permissions Tauri");

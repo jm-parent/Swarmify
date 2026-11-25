@@ -24,7 +24,7 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
         title: "Agent",
         status: "idle",
         collapsed: false,
-        terminal: { shell: "powershell", preset: "claude", cwd: "", sessionId: crypto.randomUUID() },
+        terminal: { shell: "powershell", preset: "copilot", cwd: "", sessionId: crypto.randomUUID() },
       },
     };
   }

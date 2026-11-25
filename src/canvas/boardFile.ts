@@ -36,6 +36,8 @@ export function parseBoard(text: string): BoardNode[] {
       typeof raw.data?.collapsed === "boolean" &&
       (raw.type !== "agent" || typeof raw.data?.terminal?.sessionId === "string");
     if (!valid) throw new Error("Fichier de board invalide.");
-    return { ...raw, selected: false } as BoardNode;
+    // Aucun processus ne survit à la fermeture de l'app : un statut d'exécution restauré devient « idle ».
+    const status = ["running", "active", "waiting"].includes(raw.data.status) ? "idle" : raw.data.status;
+    return { ...raw, selected: false, data: { ...raw.data, status } } as BoardNode;
   });
 }

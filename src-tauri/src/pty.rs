@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::os::windows::process::CommandExt;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
+
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
@@ -166,6 +169,23 @@ pub fn pty_kill(state: State<PtyState>, id: String) -> Result<(), String> {
     let mut map = state.0.lock().map_err(err)?;
     kill_session(&mut map, &id);
     Ok(())
+}
+
+// Indique pour chaque binaire s'il est accessible dans le PATH (résolution PATHEXT via where.exe).
+#[tauri::command]
+pub fn detect_clis(names: Vec<String>) -> HashMap<String, bool> {
+    names
+        .into_iter()
+        .map(|name| {
+            let found = std::process::Command::new("where.exe")
+                .arg(&name)
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map(|out| out.status.success())
+                .unwrap_or(false);
+            (name, found)
+        })
+        .collect()
 }
 
 #[cfg(test)]

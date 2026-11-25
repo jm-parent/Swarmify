@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
+import { invoke } from "@tauri-apps/api/core";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -18,16 +19,24 @@ const SHELLS: { value: ShellKind; label: string }[] = [
   { value: "gitbash", label: "Git Bash" },
 ];
 
-const PRESETS: { value: AgentPreset; label: string }[] = [
-  { value: "claude", label: "Claude Code" },
-  { value: "codex", label: "Codex" },
-  { value: "copilot", label: "Copilot CLI" },
+const PRESETS: { value: AgentPreset; label: string; binary?: string }[] = [
+  { value: "claude", label: "Claude Code", binary: "claude" },
+  { value: "codex", label: "Codex", binary: "codex" },
+  { value: "copilot", label: "Copilot CLI", binary: "copilot" },
   { value: "shell", label: "Shell seul" },
 ];
 
 export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const config = data.terminal as TerminalConfig;
+  const [installed, setInstalled] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const binaries = PRESETS.flatMap((p) => (p.binary ? [p.binary] : []));
+    invoke<Record<string, boolean>>("detect_clis", { names: binaries })
+      .then(setInstalled)
+      .catch((err) => console.error("Détection des CLIs impossible :", err));
+  }, []);
 
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -169,9 +178,14 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
           disabled={running}
           onChange={(e) => setConfig({ preset: e.currentTarget.value as AgentPreset })}
         >
-          {PRESETS.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
+          {PRESETS.map((p) => {
+            const available = !p.binary || installed[p.binary] === true;
+            return (
+              <option key={p.value} value={p.value} disabled={!available}>
+                {available ? p.label : `${p.label} (non installé)`}
+              </option>
+            );
+          })}
         </select>
         <input
           className="agent-cwd"
