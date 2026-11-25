@@ -1,0 +1,34 @@
+# OpenCodeReview PR review: runs on every PR open/update and posts inline review comments.
+#
+# Required repository configuration (Settings -> Secrets and variables -> Actions):
+#   secret    OCR_LLM_URL            LLM API endpoint
+#   secret    OCR_LLM_AUTH_TOKEN     LLM auth token
+#   variable  OCR_LLM_MODEL          model name
+#   variable  OCR_LLM_USE_ANTHROPIC  'true' for Anthropic, 'false' for OpenAI-compatible
+#
+# Pinned to a commit of alibaba/open-code-review for reproducibility.
+name: OpenCodeReview PR Review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ocr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: alibaba/open-code-review@64e2075fb2b588e3c490c7c6166f9edab2820c6a
+        with:
+          llm_url: ${{ secrets.OCR_LLM_URL }}
+          llm_auth_token: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
+          llm_model: ${{ vars.OCR_LLM_MODEL }}
+          llm_use_anthropic: ${{ vars.OCR_LLM_USE_ANTHROPIC }}
