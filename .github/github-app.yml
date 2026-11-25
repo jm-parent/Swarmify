@@ -1,0 +1,7 @@
+scripts:
+  - name: Setup
+    command: npm install
+    triggers:
+      - session.create
+  - name: Run
+    command: npm run tauri dev
