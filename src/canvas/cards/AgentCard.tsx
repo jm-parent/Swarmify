@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
-import { invoke } from "@tauri-apps/api/core";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -10,6 +9,7 @@ import { useBoardStore } from "../boardStore";
 import type { BoardNode } from "../types";
 import { buildLaunch, type AgentPreset, type ShellKind, type TerminalConfig } from "../terminal/launch";
 import { onPtyExit, onPtyOutput, ptyKill, ptyResize, ptySpawn, ptyWrite } from "../terminal/ptyBridge";
+import { PROVIDERS, useCliStatus } from "../providers";
 import { CardFrame } from "./CardFrame";
 
 const SHELLS: { value: ShellKind; label: string }[] = [
@@ -19,24 +19,24 @@ const SHELLS: { value: ShellKind; label: string }[] = [
   { value: "gitbash", label: "Git Bash" },
 ];
 
-const PRESETS: { value: AgentPreset; label: string; binary?: string }[] = [
-  { value: "claude", label: "Claude Code", binary: "claude" },
-  { value: "codex", label: "Codex", binary: "codex" },
-  { value: "copilot", label: "Copilot CLI", binary: "copilot" },
-  { value: "shell", label: "Shell seul" },
-];
-
 export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const config = data.terminal as TerminalConfig;
-  const [installed, setInstalled] = useState<Record<string, boolean>>({});
+  const cliStatus = useCliStatus();
 
+  // Seuls les fournisseurs installés sont proposés ; « Shell seul » est toujours disponible.
+  const presetOptions: { value: AgentPreset; label: string }[] = [
+    { value: "shell", label: "Shell seul" },
+    ...PROVIDERS.filter((p) => cliStatus?.[p.binary]?.installed).map((p) => ({ value: p.id, label: p.label })),
+  ];
+
+  // Une carte dont le fournisseur n'est plus installé repasse sur le shell.
   useEffect(() => {
-    const binaries = PRESETS.flatMap((p) => (p.binary ? [p.binary] : []));
-    invoke<Record<string, boolean>>("detect_clis", { names: binaries })
-      .then(setInstalled)
-      .catch((err) => console.error("Détection des CLIs impossible :", err));
-  }, []);
+    if (cliStatus && !presetOptions.some((o) => o.value === config.preset)) {
+      updateCard(id, { terminal: { ...config, preset: "shell" } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cliStatus]);
 
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -156,6 +156,18 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Carte créée pour une action (ex. installer une CLI) : lance le shell puis envoie la commande une fois.
+  useEffect(() => {
+    const command = data.startCommand;
+    if (!command) return;
+    updateCard(id, { startCommand: undefined });
+    void launch(false).then(() => {
+      const session = sessionRef.current;
+      if (session) void ptyWrite(session, `${command}\r`).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openFolder = async () => {
     const folder = config.cwd || (await homeDir());
     await openPath(folder).catch((err) => setError(String(err)));
@@ -178,14 +190,11 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
           disabled={running}
           onChange={(e) => setConfig({ preset: e.currentTarget.value as AgentPreset })}
         >
-          {PRESETS.map((p) => {
-            const available = !p.binary || installed[p.binary] === true;
-            return (
-              <option key={p.value} value={p.value} disabled={!available}>
-                {available ? p.label : `${p.label} (non installé)`}
-              </option>
-            );
-          })}
+          {presetOptions.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
         </select>
         <input
           className="agent-cwd"

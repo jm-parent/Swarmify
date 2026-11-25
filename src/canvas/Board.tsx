@@ -14,6 +14,7 @@ import { useBoardStore } from "./boardStore";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
 import { ZoomBar } from "./ZoomBar";
 import { AddBar } from "./AddBar";
+import { ProviderRail } from "./ProviderRail";
 import { RadialMenu, type RadialItem } from "./RadialMenu";
 import { NoteCard } from "./cards/NoteCard";
 import { KanbanCard } from "./cards/KanbanCard";
@@ -119,6 +120,7 @@ function BoardCanvas() {
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#2a2a24" />
       <AddBar />
       <ZoomBar />
+      <ProviderRail />
       {menu && <RadialMenu x={menu.x} y={menu.y} items={menuItems} onClose={closeMenu} />}
     </ReactFlow>
   );

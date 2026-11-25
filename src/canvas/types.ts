@@ -17,6 +17,8 @@ export interface CardData extends Record<string, unknown> {
   body?: string;
   items?: KanbanItem[];
   terminal?: TerminalConfig;
+  // Commande envoyée au shell dès son lancement, une seule fois.
+  startCommand?: string;
 }
 
 export type BoardNode = Node<CardData, CardType>;

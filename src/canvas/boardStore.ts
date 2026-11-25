@@ -55,7 +55,7 @@ export interface BoardState {
   clipboard: BoardNode[];
   onNodesChange: (changes: NodeChangeset<BoardNode>) => void;
   checkpoint: () => void;
-  addCard: (type: CardType, position: XYPosition) => void;
+  addCard: (type: CardType, position: XYPosition) => string;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   clearSelection: () => void;
@@ -80,12 +80,11 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   addCard: (type, position) => {
     get().checkpoint();
+    const card = createCard(type, position);
     set((s) => ({
-      nodes: [
-        ...s.nodes.map((n) => ({ ...n, selected: false })),
-        { ...createCard(type, position), selected: true },
-      ],
+      nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), { ...card, selected: true }],
     }));
+    return card.id;
   },
 
   updateCard: (id, patch) =>

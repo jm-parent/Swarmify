@@ -171,9 +171,16 @@ pub fn pty_kill(state: State<PtyState>, id: String) -> Result<(), String> {
     Ok(())
 }
 
-// Indique pour chaque binaire s'il est accessible dans le PATH (résolution PATHEXT via where.exe).
+// Indique pour chaque binaire s'il est accessible dans le PATH et sa version.
+// `cmd /C` résout les shims .cmd installés par npm, que Command::new ne trouve pas seul.
+#[derive(serde::Serialize)]
+pub struct CliStatus {
+    installed: bool,
+    version: Option<String>,
+}
+
 #[tauri::command]
-pub fn detect_clis(names: Vec<String>) -> HashMap<String, bool> {
+pub fn detect_clis(names: Vec<String>) -> HashMap<String, CliStatus> {
     names
         .into_iter()
         .map(|name| {
@@ -183,7 +190,16 @@ pub fn detect_clis(names: Vec<String>) -> HashMap<String, bool> {
                 .output()
                 .map(|out| out.status.success())
                 .unwrap_or(false);
-            (name, found)
+            let version = found.then(|| {
+                std::process::Command::new("cmd.exe")
+                    .args(["/C", &name, "--version"])
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .output()
+                    .ok()
+                    .and_then(|out| String::from_utf8_lossy(&out.stdout).lines().next().map(|l| l.trim().to_string()))
+                    .filter(|l| !l.is_empty())
+            });
+            (name, CliStatus { installed: found, version: version.flatten() })
         })
         .collect()
 }
