@@ -37,7 +37,7 @@ export function createCard(type: CardType, position: XYPosition): BoardNode {
 
 function seedNodes(): BoardNode[] {
   const note = createCard("note", { x: 0, y: 0 });
-  note.data = { ...note.data, title: "Bienvenue", body: "# Spatial Agent Board\n\nGlisse, zoome, ajoute des cartes." };
+  note.data = { ...note.data, title: "Bienvenue", body: "# Swarmify\n\nGlisse, zoome, ajoute des cartes." };
   const kanban = createCard("kanban", { x: 340, y: 0 });
   kanban.data = {
     ...kanban.data,

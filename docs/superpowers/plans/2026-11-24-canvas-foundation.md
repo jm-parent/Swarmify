@@ -8,7 +8,7 @@
 
 **Tech Stack:** Tauri 2, React 19, TypeScript, Vite, `@xyflow/react`, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-24-spatial-agent-board-design.md` (section 6, étape 1).
+**Spec:** `docs/superpowers/specs/2026-11-24-swarmify-design.md` (section 6, étape 1).
 
 ## Global Constraints
 
