@@ -20,8 +20,8 @@ Toutes les contraintes « NEEDS CLARIFICATION » du plan sont résolues ci-desso
 
 ## R3 - Ajout par Ctrl+V
 
-- **Décision** : tenter d'abord `navigator.clipboard.read()` dans le handler Ctrl+V existant (`src/canvas/Board.tsx`) ; si WebView2 refuse l'accès ou ne renvoie pas l'image, ajouter `tauri-plugin-clipboard-manager` (`readImage`).
-- **Justification** : éviter une dépendance si l'API web suffit. Le premier geste du plan est un spike qui tranche.
+- **Décision** : plugin retenu par la décision R1 du ledger ; spike non exécutable en subagent.
+- **Justification** : le spike qui devait trancher ne peut pas être exécuté en subagent (WebView2 interactif requis). Le plugin `tauri-plugin-clipboard-manager` (`readImage`) est donc retenu, sans passer par `navigator.clipboard.read()`.
 - **Comportement** : si le presse-papiers ne contient pas d'image, Ctrl+V garde le comportement actuel (`store.paste()`).
 
 ## R4 - Assainissement SVG
