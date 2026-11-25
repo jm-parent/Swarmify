@@ -12,6 +12,7 @@ Pour toute feature, suivre `docs/dev-workflow.md` et la constitution `.specify/m
 - Ne pas invoquer les skills `superpowers:brainstorming` ni `superpowers:writing-plans` dans ce repo : leur rôle est tenu par SpecKit.
 - Pour exécuter, utiliser `superpowers:subagent-driven-development` ou `superpowers:executing-plans` sur `specs/<id>/tasks.md`, sans re-planifier.
 - Ne jamais lancer `/speckit-implement`, ni `specify workflow run` qui l'enchaîne.
+- Cartographie : avant de chercher dans le code, consulter `graphify-out/GRAPH_REPORT.md` ou `graphify query "<question>"`. Ne pas committer `graphify-out/` au-delà de `graph.json` et `GRAPH_REPORT.md`.
 - Pour toute feature qui modifie l'interface (composants, styles, HTML sous `src/`), faire une passe `impeccable` après l'exécution et avant la revue de code.
 
 ## Subagents
