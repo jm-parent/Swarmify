@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   type NodeTypes,
+  type XYPosition,
 } from "@xyflow/react";
+import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
 import { ZoomBar } from "./ZoomBar";
 import { AddBar } from "./AddBar";
+import { RadialMenu, type RadialItem } from "./RadialMenu";
 import { NoteCard } from "./cards/NoteCard";
 import { KanbanCard } from "./cards/KanbanCard";
 import { AgentCard } from "./cards/AgentCard";
@@ -24,10 +29,34 @@ function isEditable(target: EventTarget | null) {
 }
 
 export function Board() {
+  return (
+    <ReactFlowProvider>
+      <BoardCanvas />
+    </ReactFlowProvider>
+  );
+}
+
+function BoardCanvas() {
   const nodes = useBoardStore((s) => s.nodes);
   const onNodesChange = useBoardStore((s) => s.onNodesChange);
   const checkpoint = useBoardStore((s) => s.checkpoint);
   const [spacePressed, setSpacePressed] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number; flow: XYPosition } | null>(null);
+  const { screenToFlowPosition } = useReactFlow();
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  const menuItems = useMemo<RadialItem[]>(() => {
+    if (!menu) return [];
+    const at = menu.flow;
+    return [
+      { id: "agent", label: "Agent", icon: Bot, onSelect: () => useBoardStore.getState().addCard("agent", at) },
+      { id: "note", label: "Note", icon: StickyNote, onSelect: () => useBoardStore.getState().addCard("note", at) },
+      { id: "users", label: "Équipe", icon: Users },
+      { id: "image", label: "Image", icon: ImageIcon },
+      { id: "layers", label: "Calques", icon: Layers },
+      { id: "globe", label: "Web", icon: Globe },
+    ];
+  }, [menu]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -82,10 +111,15 @@ export function Board() {
       selectionOnDrag={!spacePressed}
       panOnDrag={spacePressed ? true : [1]}
       proOptions={{ hideAttribution: true }}
+      onPaneContextMenu={(e) => {
+        e.preventDefault();
+        setMenu({ x: e.clientX, y: e.clientY, flow: screenToFlowPosition({ x: e.clientX, y: e.clientY }) });
+      }}
     >
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
       <AddBar />
       <ZoomBar />
+      {menu && <RadialMenu x={menu.x} y={menu.y} items={menuItems} onClose={closeMenu} />}
     </ReactFlow>
   );
 }
