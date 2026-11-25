@@ -52,12 +52,9 @@ Lance le serveur Vite et la fenêtre Tauri, avec rechargement à chaud.
 | `npm run build` | Vérification TypeScript (`tsc`) puis build Vite |
 | `npm test` | Tests unitaires (Vitest) |
 
-## CI et revue de PR
+## CI
 
-- `.github/workflows/ci.yml` : à l'ouverture ou la mise à jour d'une PR, build et tests front (Ubuntu), puis `cargo check --locked` du backend Rust (Windows).
-- `.github/workflows/ocr-review.yml` : revue automatique de la PR par [OpenCodeReview](https://github.com/alibaba/open-code-review), qui poste des commentaires inline. Nécessite la configuration suivante dans *Settings → Secrets and variables → Actions* :
-  - secret `OCR_LLM_URL` et `OCR_LLM_AUTH_TOKEN`
-  - variable `OCR_LLM_MODEL` et `OCR_LLM_USE_ANTHROPIC` (`true` pour Anthropic, `false` sinon)
+`.github/workflows/ci.yml` : à l'ouverture ou la mise à jour d'une PR, build et tests front (Ubuntu), puis `cargo check --locked` du backend Rust (Windows).
 
 ## Structure
 
