@@ -1,3 +1,4 @@
+mod images;
 mod persistence;
 mod pty;
 
@@ -16,6 +17,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            images::images_dir,
+            images::import_image,
+            images::save_image_bytes,
+            images::save_sanitized_svg,
+            images::copy_image_file,
+            images::purge_unused_images,
             persistence::load_board,
             persistence::save_board,
             persistence::write_text_file,
