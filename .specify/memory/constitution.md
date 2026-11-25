@@ -3,13 +3,13 @@
 ## Principes fondamentaux
 
 ### 1. Cadrage avant code
-Toute feature passe par `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-tasks`, puis `/speckit-analyze`, avant tout code.
+Toute feature au-dessus du seuil « prompt direct » (voir Calibrage) passe par `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-tasks`, puis `/speckit-analyze`, avant tout code.
 
 ### 2. Brainstorming en conversation
 Le brainstorming se fait en conversation ; son résultat alimente `/speckit-specify`. Les skills Superpowers `brainstorming` et `writing-plans` ne s'appliquent pas à ce repo.
 
 ### 3. Exécution confiée à Superpowers
-L'exécution passe uniquement par Superpowers : worktree, TDD, subagents, revue, finition de branche. Ne jamais lancer `/speckit-implement`.
+L'exécution passe uniquement par Superpowers : worktree, TDD, subagents, revue, finition de branche. Ne jamais lancer `/speckit-implement`, ni `specify workflow run` qui l'enchaîne.
 
 ### 4. Le plan est tasks.md
 Au moment de l'exécution, `tasks.md` fait foi. Ne pas re-planifier.
@@ -19,7 +19,7 @@ Si le code diverge de la spec, relancer `/speckit-specify` sur la zone concerné
 
 ## Passe front (impeccable)
 
-Tout changement d'interface (composants, styles, HTML sous `src/`) passe par une passe `impeccable` après l'exécution et avant la revue de code.
+Toute feature qui modifie l'interface (composants, styles, HTML sous `src/`) passe par une passe `impeccable` après l'exécution et avant la revue de code.
 
 ## Calibrage
 

@@ -2,6 +2,8 @@
 
 Design court, validé dans la conversation. Il décrit la mise en place, pas une fonctionnalité de l'app.
 
+> **Mise à jour après exécution :** les commandes s'écrivent `/speckit-<nom>` (SpecKit 1.0.8, skills dans `.github/skills/speckit-*`), et non `/speckit.<nom>` comme ci-dessous. Une étape 7b `impeccable` (passe front) s'ajoute entre l'exécution et la revue. La version à jour de la boucle est `docs/dev-workflow.md`.
+
 ## 1. Intention et pourquoi
 
 Ajouter un cadre aux développements futurs de Swarmify :

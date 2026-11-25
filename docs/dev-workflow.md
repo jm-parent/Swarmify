@@ -13,7 +13,7 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 | 5. `/speckit-tasks` | SpecKit | `specs/<id>/tasks.md` |
 | 6. `/speckit-analyze` | SpecKit | rapport de cohérence spec / plan / tâches, à corriger avant exécution |
 | 7. Worktree, TDD, exécution par subagents | Superpowers | code et tests, une tâche par subagent |
-| 7b. Passe `impeccable` (uniquement si la feature touche l'interface) | impeccable | critique et polissage de l'UI, avant la revue |
+| 7b. Passe `impeccable` (si la feature modifie l'interface) | impeccable | critique et polissage de l'UI, avant la revue |
 | 8. Revue de code | Superpowers | liste de points par sévérité |
 | 9. Finition de branche | Superpowers | PR ouverte ou branche fusionnée |
 
@@ -21,7 +21,7 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 
 - Ne pas sauter `tasks.md`.
 - Au passage à l'exécution, dire à l'agent : « Le plan est dans `specs/<id>/tasks.md`. Ne pas re-planifier, exécuter. »
-- Ne jamais lancer `/speckit-implement` en parallèle de Superpowers.
+- Ne jamais lancer `/speckit-implement`, ni `specify workflow run` qui l'enchaîne.
 - Si le code diverge de la spec, relancer `/speckit-specify` sur la zone concernée.
 - Front : toute modification de l'interface (composants, styles, HTML sous `src/`) passe par `impeccable` à l'étape 7b.
 
