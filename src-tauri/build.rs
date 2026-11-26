@@ -10,6 +10,12 @@ fn main() {
             "pty_resize",
             "pty_kill",
             "detect_clis",
+            "images_dir",
+            "import_image",
+            "save_image_bytes",
+            "save_sanitized_svg",
+            "copy_image_file",
+            "purge_unused_images",
         ])),
     )
     .expect("échec de la génération des permissions Tauri");
