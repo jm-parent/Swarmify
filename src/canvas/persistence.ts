@@ -4,7 +4,7 @@ import { useBoardStore } from "./boardStore";
 import { parseBoard, serializeBoard } from "./boardFile";
 import { errorMessage, imagesFolderFor, importImageAsset, joinImagePath } from "./images";
 import { useImportNotice } from "./ImportNotice";
-import type { BoardNode } from "./types";
+import type { BoardNode, ImageAsset } from "./types";
 
 const SAVE_DEBOUNCE_MS = 500;
 
@@ -29,14 +29,20 @@ function scheduleSave(nodes: BoardNode[]) {
   saveTimer = setTimeout(flushSave, SAVE_DEBOUNCE_MS);
 }
 
+// Images référencées par un nœud, quel que soit son type : un nœud d'un autre type peut porter une image.
+function referencedImages(nodes: BoardNode[]): ImageAsset[] {
+  return nodes.flatMap((node) => {
+    const image = node.data.image;
+    return image && typeof image.file === "string" ? [image] : [];
+  });
+}
+
 // Ne garde que les images référencées par le board : appelée uniquement pour un board lu et parsé (R13).
-async function purgeUnusedImages(nodes: BoardNode[]): Promise<void> {
-  const referenced = nodes.flatMap((node) => (node.type === "image" && node.data.image ? [node.data.image.file] : []));
-  try {
-    await invoke("purge_unused_images", { referenced });
-  } catch (err) {
-    console.error("Nettoyage des images inutilisées impossible :", err);
-  }
+function purgeUnusedImages(nodes: BoardNode[]): void {
+  const referenced = referencedImages(nodes).map((image) => image.file);
+  invoke("purge_unused_images", { referenced }).catch((err) =>
+    console.error("Nettoyage des images inutilisées impossible :", err),
+  );
 }
 
 // Restaure le board sauvegardé, puis sauvegarde chaque modification (débouncée).
@@ -44,12 +50,13 @@ export async function restoreAndAutosave(): Promise<void> {
   if (started) return;
   started = true;
 
+  let loaded: BoardNode[] | undefined;
   try {
     const saved = await invoke<string | null>("load_board");
     if (saved) {
       const nodes = parseBoard(saved);
       useBoardStore.setState({ nodes, past: [], future: [] });
-      await purgeUnusedImages(nodes);
+      loaded = nodes;
     }
   } catch (err) {
     console.error("Chargement du board impossible, board par défaut affiché :", err);
@@ -59,6 +66,9 @@ export async function restoreAndAutosave(): Promise<void> {
     if (state.nodes !== prev.nodes) scheduleSave(state.nodes);
   });
   window.addEventListener("beforeunload", flushSave);
+
+  // Sans attente : un appel IPC bloqué ne retarde pas l'autosave.
+  if (loaded) purgeUnusedImages(loaded);
 }
 
 export async function exportBoard(): Promise<void> {
@@ -72,9 +82,7 @@ export async function exportBoard(): Promise<void> {
 
   // Une même image peut être référencée par plusieurs cartes (collage) : on la copie une fois.
   const images = new Map<string, string>();
-  for (const node of nodes) {
-    if (node.type === "image" && node.data.image) images.set(node.data.image.file, node.data.image.originalName);
-  }
+  for (const image of referencedImages(nodes)) images.set(image.file, image.originalName);
   const folder = imagesFolderFor(path);
   const errors: string[] = [];
   for (const [file, originalName] of images) {
