@@ -56,6 +56,7 @@ export interface BoardState {
   checkpoint: () => void;
   addCard: (type: CardType, position: XYPosition) => string;
   addImageCard: (asset: ImageAsset, position: XYPosition, size: { width: number; height: number }) => string;
+  replaceImage: (id: string, asset: ImageAsset) => void;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   removeCard: (id: string) => void;
@@ -104,6 +105,16 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), card],
     }));
     return id;
+  },
+
+  // Remplace l'image d'une carte existante (position et taille inchangées). Annulable.
+  replaceImage: (id, asset) => {
+    get().checkpoint();
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, title: asset.originalName, image: asset } } : n,
+      ),
+    }));
   },
 
   updateCard: (id, patch) =>
