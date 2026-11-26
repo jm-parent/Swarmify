@@ -6,6 +6,7 @@ const CARD_TYPES = ["note", "kanban", "agent", "image"];
 const CARD_STATUSES: CardStatus[] = ["idle", "active", "running", "waiting", "error"];
 const IMAGE_FILE_PATTERN = /^[0-9a-f-]{36}\.(png|jpg|gif|webp|svg)$/;
 const IMAGE_FORMATS: ImageFormat[] = ["png", "jpeg", "gif", "webp", "svg"];
+const IMAGE_MAX_BYTES = 20971520;
 
 function isValidImage(image: any): boolean {
   return (
@@ -14,10 +15,15 @@ function isValidImage(image: any): boolean {
     typeof image.file === "string" &&
     IMAGE_FILE_PATTERN.test(image.file) &&
     IMAGE_FORMATS.includes(image.format) &&
+    typeof image.originalName === "string" &&
+    typeof image.bytes === "number" &&
+    image.bytes > 0 &&
+    image.bytes <= IMAGE_MAX_BYTES &&
     typeof image.width === "number" &&
     image.width > 0 &&
     typeof image.height === "number" &&
-    image.height > 0
+    image.height > 0 &&
+    typeof image.addedAt === "string"
   );
 }
 
