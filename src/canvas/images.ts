@@ -147,6 +147,7 @@ function isLocalTarget(target: string): boolean {
 }
 
 export function sanitizeSvg(text: string): string {
+  if (!DOMPurify.isSupported) throw new Error("Assainissement SVG indisponible");
   // Déclarée ici et retirée à la fin de l'appel : les autres usages de DOMPurify ne sont pas affectés.
   function dropExternalReferences(_node: Element, data: { attrName: string; attrValue: string; keepAttr: boolean }) {
     const value = data.attrValue.trim();

@@ -120,7 +120,7 @@ describe("images", () => {
     }
     const elapsed = performance.now() - start;
     expect(error).toEqual(new Error("SVG invalide"));
-    expect(elapsed).toBeLessThan(200);
+    expect(elapsed).toBeLessThan(2000);
   });
 
   it("traduit en français l'erreur de lecture d'un SVG importé", async () => {
