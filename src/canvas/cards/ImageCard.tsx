@@ -26,7 +26,7 @@ export function ImageCard({ id, data, selected }: NodeProps<BoardNode>) {
         if (!cancelled) setSrc(url);
       },
       () => {
-        if (!cancelled) setSrc(null);
+        if (!cancelled) setMissing(true);
       },
     );
     return () => {

@@ -433,9 +433,22 @@ body,
 }
 
 .image-missing button {
+  padding: 4px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-primary);
   font: inherit;
-  padding: 4px 10px;
   cursor: pointer;
+}
+
+.image-missing button:hover {
+  background: var(--bg-surface-2);
+}
+
+.image-missing button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .import-notice {
@@ -443,7 +456,8 @@ body,
   padding: 8px 12px;
   border-radius: var(--r-card);
   background: var(--danger-tint);
-  color: var(--danger);
+  color: var(--text-primary);
+  border: 1px solid var(--danger);
   font-size: 13px;
 }
 

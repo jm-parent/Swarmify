@@ -80,7 +80,7 @@ export async function duplicateImageAsset(file: string): Promise<ImageAsset> {
   return asset;
 }
 
-function basename(path: string): string {
+export function basename(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 

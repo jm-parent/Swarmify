@@ -13,7 +13,15 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
-import { errorMessage, IMAGE_DIALOG_FILTERS, duplicateImageAsset, importImageFiles, type ImportedImage } from "./images";
+import {
+  basename,
+  errorMessage,
+  IMAGE_DIALOG_FILTERS,
+  duplicateImageAsset,
+  importImageAsset,
+  importImageFiles,
+  type ImportedImage,
+} from "./images";
 import { importClipboardImage } from "./clipboardImage";
 import { useImportNotice } from "./ImportNotice";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
@@ -32,7 +40,7 @@ const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard, image:
 function isEditable(target: EventTarget | null) {
   return (
     target instanceof HTMLElement &&
-    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName))
   );
 }
 
@@ -76,12 +84,30 @@ function importFiles(paths: string[], origin: XYPosition): Promise<void> {
   );
 }
 
+// Les cartes choisies au sélecteur sont centrées sur le centre de la vue : la taille n'est connue qu'après mesure.
+async function importPickedFiles(paths: string[], centre: XYPosition): Promise<string[]> {
+  const origins = spreadPositions(centre, paths.length);
+  const errors: string[] = [];
+  for (const [index, path] of paths.entries()) {
+    try {
+      const { asset, size } = await importImageAsset(path);
+      const origin = origins[index];
+      useBoardStore
+        .getState()
+        .addImageCard(asset, { x: origin.x - size.width / 2, y: origin.y - size.height / 2 }, size);
+    } catch (err) {
+      errors.push(`${basename(path)} : ${errorMessage(err)}`);
+    }
+  }
+  return errors;
+}
+
 // Annuler le sélecteur renvoie null : rien à faire.
-async function pickImageFiles(origin: XYPosition): Promise<void> {
+async function pickImageFiles(centre: XYPosition): Promise<void> {
   try {
     const paths = await open({ multiple: true, filters: IMAGE_DIALOG_FILTERS });
     if (!paths || paths.length === 0) return;
-    await importFiles(paths, origin);
+    showImportErrors(await importPickedFiles(paths, centre));
   } catch (err) {
     showImportErrors([errorMessage(err)]);
   }
@@ -166,11 +192,17 @@ function BoardCanvas() {
       { id: "agent", label: "Agent", icon: Bot, onSelect: () => useBoardStore.getState().addCard("agent", at) },
       { id: "note", label: "Note", icon: StickyNote, onSelect: () => useBoardStore.getState().addCard("note", at) },
       { id: "users", label: "Équipe", icon: Users },
-      { id: "image", label: "Image", icon: ImageIcon, onSelect: () => void pickImageFiles(at) },
+      {
+        id: "image",
+        label: "Image",
+        icon: ImageIcon,
+        onSelect: () =>
+          void pickImageFiles(screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })),
+      },
       { id: "layers", label: "Calques", icon: Layers },
       { id: "globe", label: "Web", icon: Globe },
     ];
-  }, [menu]);
+  }, [menu, screenToFlowPosition]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

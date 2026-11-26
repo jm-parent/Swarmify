@@ -28,7 +28,7 @@ export function ImportNotice() {
   }, [messages, hide]);
 
   return (
-    <Panel position="bottom-center">
+    <Panel position="top-center">
       <div role="status" aria-live="polite" className={messages.length > 0 ? "import-notice" : undefined}>
         {messages.map((message, index) => (
           <p key={index}>{message}</p>
