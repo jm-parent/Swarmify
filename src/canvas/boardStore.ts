@@ -109,6 +109,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   // Remplace l'image d'une carte existante (position et taille inchangées). Annulable.
   replaceImage: (id, asset) => {
+    if (!get().nodes.some((n) => n.id === id)) return;
     get().checkpoint();
     set((s) => ({
       nodes: s.nodes.map((n) =>

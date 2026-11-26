@@ -99,4 +99,20 @@ describe("boardStore", () => {
     getState().undo();
     expect(getState().nodes[2].data.image).toEqual(asset);
   });
+
+  it("ne crée pas de point d'annulation quand la carte n'existe plus", () => {
+    const asset = {
+      file: "b.png",
+      format: "png" as const,
+      originalName: "autre.png",
+      bytes: 20,
+      width: 960,
+      height: 640,
+      addedAt: "2026-01-01T00:00:00.000Z",
+    };
+    getState().replaceImage("absente", asset);
+
+    expect(getState().past).toEqual([]);
+    expect(getState().nodes.map((n) => n.id)).toEqual(["n1", "n2"]);
+  });
 });
