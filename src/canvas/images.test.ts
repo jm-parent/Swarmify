@@ -1,12 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertSvgRoot,
   DEFAULT_SVG_SIZE,
   fitImageSize,
+  importImageAsset,
   importImageFiles,
   isImageFileName,
   joinImagePath,
 } from "./images";
+
+vi.mock("@tauri-apps/api/core", () => ({
+  convertFileSrc: (path: string) => path,
+  invoke: vi.fn(async (command: string) => {
+    if (command === "import_image") return { file: "a.svg", format: "svg", path: "C:\\images\\a.svg", bytes: 10 };
+    if (command === "read_text_file") throw "permission refusée";
+    throw new Error(`commande inattendue : ${command}`);
+  }),
+}));
 
 describe("images", () => {
   // Le module ne touche pas le DOM à l'import : il doit se charger sous Node.
@@ -63,6 +73,21 @@ describe("images", () => {
   it("accepte un texte contenant une racine <svg", () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>';
     expect(assertSvgRoot(svg)).toBe(svg);
+  });
+
+  it("refuse un <svg qui n'est pas la racine, même dans du texte ou un commentaire", () => {
+    expect(() => assertSvgRoot("x<svg/>")).toThrow("SVG invalide");
+    expect(() => assertSvgRoot("<!-- <svg --><html/>")).toThrow("SVG invalide");
+    expect(() => assertSvgRoot("<svgx/>")).toThrow("SVG invalide");
+  });
+
+  it("accepte une racine <svg précédée d'un BOM, d'une déclaration XML ou de commentaires", () => {
+    expect(assertSvgRoot("<!-- <svg --><svg/>")).toBe("<!-- <svg --><svg/>");
+    expect(assertSvgRoot('\uFEFF<?xml version="1.0"?>\n<svg/>')).toBe('\uFEFF<?xml version="1.0"?>\n<svg/>');
+  });
+
+  it("traduit en français l'erreur de lecture d'un SVG importé", async () => {
+    await expect(importImageAsset("C:\\images\\a.svg")).rejects.toThrow("Lecture du SVG impossible : permission refusée");
   });
 
   it("refuse un import sans position pour chaque fichier, avant tout appel système", async () => {

@@ -144,14 +144,22 @@ export function sanitizeSvg(text: string): string {
   }
 }
 
+// Racine <svg> attendue après BOM, espaces, déclaration XML et commentaires (même règle que is_svg côté Rust).
+const SVG_ROOT = /^\uFEFF?\s*(<\?xml[\s\S]*?\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>/]/i;
+
 // Un texte vide ou sans racine <svg> (ex. HTML renvoyé à la place d'un SVG) est refusé.
 export function assertSvgRoot(text: string): string {
-  if (!text.includes("<svg")) throw new Error("SVG invalide");
+  if (!SVG_ROOT.test(text)) throw new Error("SVG invalide");
   return text;
 }
 
 async function sanitizeStoredSvg(imported: ImageImport): Promise<void> {
-  const raw = await invoke<string>("read_text_file", { path: imported.path });
+  let raw: string;
+  try {
+    raw = await invoke<string>("read_text_file", { path: imported.path });
+  } catch (error) {
+    throw new Error(`Lecture du SVG impossible : ${error instanceof Error ? error.message : String(error)}`);
+  }
   const clean = assertSvgRoot(sanitizeSvg(raw));
   await invoke("save_sanitized_svg", { file: imported.file, contents: clean });
 }
