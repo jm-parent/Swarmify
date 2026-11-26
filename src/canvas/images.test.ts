@@ -131,7 +131,7 @@ describe("images", () => {
     await expect(importImageFiles(["a.png", "b.png"], [{ x: 0, y: 0 }])).rejects.toThrow("positions manquantes");
   });
 
-  it("copie une image de images/ en passant son chemin stocké comme source de import_image", async () => {
+  it("transmet le chemin stocké à import_image et rejette un SVG illisible", async () => {
     const uuid = "0f1e2d3c-4b5a-4968-8777-a6b5c4d3e2f1";
     vi.mocked(invoke).mockClear();
 
