@@ -29,6 +29,17 @@ export interface ImportedImage {
   size: { width: number; height: number };
 }
 
+// Une seule résolution de images_dir par session ; un échec n'est pas gardé, il sera réessayé.
+let imagesDir: Promise<string> | undefined;
+
+export function imageSrc(file: string): Promise<string> {
+  imagesDir ??= invoke<string>("images_dir").catch((err: unknown) => {
+    imagesDir = undefined;
+    throw err;
+  });
+  return imagesDir.then((dir) => convertFileSrc(`${dir}/${file}`));
+}
+
 function basename(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
