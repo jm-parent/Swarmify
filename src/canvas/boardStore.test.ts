@@ -190,6 +190,20 @@ describe("boardStore", () => {
     expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
   });
 
+  it("met la copie dans le collage annulé qui reste dans le futur", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    getState().copySelected();
+    const [pastedId] = getState().paste();
+    const copy = { ...imageAsset, file: "copie.png" };
+
+    getState().undo();
+    expect(getState().nodes.some((n) => n.id === pastedId)).toBe(false);
+    getState().patchImageAsset(pastedId, imageAsset.file, copy);
+    getState().redo();
+
+    expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
+  });
+
   it("ne touche pas à l'état refait quand la copie finit après un remplacement annulé", () => {
     getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
     getState().copySelected();

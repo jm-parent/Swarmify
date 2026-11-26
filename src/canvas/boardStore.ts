@@ -123,11 +123,10 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   // Les instantanés de l'historique sont mis à jour aussi, sinon annuler ramènerait le fichier d'origine.
   // Seul un état dont l'image est encore fromFile est mis à jour : un remplacement fait entre-temps n'est pas écrasé.
   patchImageAsset: (id, fromFile, asset) => {
-    if (!get().nodes.some((n) => n.id === id)) return;
     const withAsset = (nodes: BoardNode[]) =>
-      nodes.map((n) =>
-        n.id === id && n.data.image?.file === fromFile ? { ...n, data: { ...n.data, image: asset } } : n,
-      );
+      nodes.some((n) => n.id === id && n.data.image?.file === fromFile)
+        ? nodes.map((n) => (n.id === id && n.data.image?.file === fromFile ? { ...n, data: { ...n.data, image: asset } } : n))
+        : nodes;
     set((s) => ({
       nodes: withAsset(s.nodes),
       past: s.past.map(withAsset),
