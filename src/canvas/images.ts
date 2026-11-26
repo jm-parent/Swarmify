@@ -1,4 +1,8 @@
 import DOMPurify from "dompurify";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import type { XYPosition } from "@xyflow/react";
+import { useBoardStore } from "./boardStore";
+import type { ImageAsset, ImageFormat } from "./types";
 
 export const MAX_CARD_WIDTH = 480;
 export const DEFAULT_SVG_SIZE = { width: 480, height: 360 };
@@ -11,6 +15,69 @@ export function fitImageSize(natural: { width: number; height: number }): { widt
     width: MAX_CARD_WIDTH,
     height: Math.max(1, Math.round((natural.height * MAX_CARD_WIDTH) / natural.width)),
   };
+}
+
+interface ImageImport {
+  file: string;
+  path: string;
+  format: ImageFormat;
+  bytes: number;
+}
+
+export interface ImportedImage {
+  asset: ImageAsset;
+  size: { width: number; height: number };
+}
+
+function basename(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function measureImage(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error("Image illisible"));
+    img.src = src;
+  });
+}
+
+// Copie l'image dans images/ puis mesure la copie. Ne crée pas de carte.
+export async function importImageAsset(path: string): Promise<ImportedImage> {
+  const imported = await invoke<ImageImport>("import_image", { sourcePath: path });
+  const measured = await measureImage(convertFileSrc(imported.path));
+  // Un SVG sans dimensions intrinsèques mesure 0 × 0 : on retient la taille par défaut.
+  const natural = measured.width > 0 && measured.height > 0 ? measured : DEFAULT_SVG_SIZE;
+  return {
+    asset: {
+      file: imported.file,
+      format: imported.format,
+      originalName: basename(path),
+      bytes: imported.bytes,
+      width: natural.width,
+      height: natural.height,
+      addedAt: new Date().toISOString(),
+    },
+    size: fitImageSize(natural),
+  };
+}
+
+// Importe les fichiers l'un après l'autre : un fichier en erreur n'empêche pas les autres.
+export async function importImageFiles(paths: string[], positions: XYPosition[]): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [index, path] of paths.entries()) {
+    try {
+      const { asset, size } = await importImageAsset(path);
+      useBoardStore.getState().addImageCard(asset, positions[index], size);
+    } catch (err) {
+      errors.push(`${basename(path)} : ${errorMessage(err)}`);
+    }
+  }
+  return errors;
 }
 
 // Une cible hors du board (http:, //, chemin relatif…) ferait charger une ressource externe.
