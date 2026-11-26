@@ -74,8 +74,10 @@ export function measureImage(src: string): Promise<{ width: number; height: numb
 }
 
 // Copie l'image dans images/ puis mesure la copie. Ne crée pas de carte.
+// Un SVG est assaini avant la mesure (R9) : la copie stockée est réécrite avec sa version propre.
 export async function importImageAsset(path: string): Promise<ImportedImage> {
   const imported = await invoke<ImageImport>("import_image", { sourcePath: path });
+  if (imported.format === "svg") await sanitizeStoredSvg(imported);
   const measured = await measureImage(convertFileSrc(imported.path));
   // Un SVG sans dimensions intrinsèques mesure 0 × 0 : on retient la taille par défaut.
   const natural = measured.width > 0 && measured.height > 0 ? measured : DEFAULT_SVG_SIZE;
@@ -140,4 +142,16 @@ export function sanitizeSvg(text: string): string {
   } finally {
     DOMPurify.removeHook("uponSanitizeAttribute", dropExternalReferences);
   }
+}
+
+// Un texte vide ou sans racine <svg> (ex. HTML renvoyé à la place d'un SVG) est refusé.
+export function assertSvgRoot(text: string): string {
+  if (!text.includes("<svg")) throw new Error("SVG invalide");
+  return text;
+}
+
+async function sanitizeStoredSvg(imported: ImageImport): Promise<void> {
+  const raw = await invoke<string>("read_text_file", { path: imported.path });
+  const clean = assertSvgRoot(sanitizeSvg(raw));
+  await invoke("save_sanitized_svg", { file: imported.file, contents: clean });
 }

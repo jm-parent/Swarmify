@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SVG_SIZE, fitImageSize, importImageFiles, isImageFileName, joinImagePath } from "./images";
+import {
+  assertSvgRoot,
+  DEFAULT_SVG_SIZE,
+  fitImageSize,
+  importImageFiles,
+  isImageFileName,
+  joinImagePath,
+} from "./images";
 
 describe("images", () => {
   // Le module ne touche pas le DOM à l'import : il doit se charger sous Node.
@@ -46,6 +53,16 @@ describe("images", () => {
   it("joint le dossier et le nom avec le séparateur déjà présent dans le dossier", () => {
     expect(joinImagePath("C:\\Users\\me\\AppData\\images", "f.png")).toBe("C:\\Users\\me\\AppData\\images\\f.png");
     expect(joinImagePath("/home/me/.local/share/images", "f.png")).toBe("/home/me/.local/share/images/f.png");
+  });
+
+  it("refuse un SVG vide ou sans racine <svg après assainissement", () => {
+    expect(() => assertSvgRoot("")).toThrow("SVG invalide");
+    expect(() => assertSvgRoot("<html><body></body></html>")).toThrow("SVG invalide");
+  });
+
+  it("accepte un texte contenant une racine <svg", () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>';
+    expect(assertSvgRoot(svg)).toBe(svg);
   });
 
   it("refuse un import sans position pour chaque fichier, avant tout appel système", async () => {
