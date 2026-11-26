@@ -32,12 +32,28 @@ export interface ImportedImage {
 // Une seule résolution de images_dir par session ; un échec n'est pas gardé, il sera réessayé.
 let imagesDir: Promise<string> | undefined;
 
-export function imageSrc(file: string): Promise<string> {
+// Même forme que validate_file_name côté Rust : `<uuid>.<ext>`, JPEG stocké en `.jpg`.
+const IMAGE_FILE_NAME = /^[0-9a-f-]{36}\.(png|jpg|gif|webp|svg)$/;
+
+export function isImageFileName(file: string): boolean {
+  return IMAGE_FILE_NAME.test(file);
+}
+
+// Le séparateur est celui déjà présent dans le dossier (images_dir renvoie un chemin natif).
+export function joinImagePath(dir: string, file: string): string {
+  const sep = dir.includes("\\") ? "\\" : "/";
+  return `${dir}${sep}${file}`;
+}
+
+// Le nom vient du store SQLite (frontière de confiance) : il ne doit jamais sortir de images/.
+export async function imageSrc(file: string): Promise<string> {
+  if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
   imagesDir ??= invoke<string>("images_dir").catch((err: unknown) => {
     imagesDir = undefined;
     throw err;
   });
-  return imagesDir.then((dir) => convertFileSrc(`${dir}/${file}`));
+  const dir = await imagesDir;
+  return convertFileSrc(joinImagePath(dir, file));
 }
 
 function basename(path: string): string {
@@ -78,7 +94,9 @@ export async function importImageAsset(path: string): Promise<ImportedImage> {
 }
 
 // Importe les fichiers l'un après l'autre : un fichier en erreur n'empêche pas les autres.
+// Contrat de l'appelant : une position par chemin. Vérifié avant tout import, pour ne pas créer de carte sans position.
 export async function importImageFiles(paths: string[], positions: XYPosition[]): Promise<string[]> {
+  if (positions.length < paths.length) throw new Error("positions manquantes");
   const errors: string[] = [];
   for (const [index, path] of paths.entries()) {
     try {
