@@ -27,6 +27,16 @@ function scheduleSave(nodes: BoardNode[]) {
   saveTimer = setTimeout(flushSave, SAVE_DEBOUNCE_MS);
 }
 
+// Ne garde que les images référencées par le board : appelée uniquement pour un board lu et parsé (R13).
+async function purgeUnusedImages(nodes: BoardNode[]): Promise<void> {
+  const referenced = nodes.flatMap((node) => (node.type === "image" && node.data.image ? [node.data.image.file] : []));
+  try {
+    await invoke("purge_unused_images", { referenced });
+  } catch (err) {
+    console.error("Nettoyage des images inutilisées impossible :", err);
+  }
+}
+
 // Restaure le board sauvegardé, puis sauvegarde chaque modification (débouncée).
 export async function restoreAndAutosave(): Promise<void> {
   if (started) return;
@@ -34,7 +44,11 @@ export async function restoreAndAutosave(): Promise<void> {
 
   try {
     const saved = await invoke<string | null>("load_board");
-    if (saved) useBoardStore.setState({ nodes: parseBoard(saved), past: [], future: [] });
+    if (saved) {
+      const nodes = parseBoard(saved);
+      useBoardStore.setState({ nodes, past: [], future: [] });
+      await purgeUnusedImages(nodes);
+    }
   } catch (err) {
     console.error("Chargement du board impossible, board par défaut affiché :", err);
   }
