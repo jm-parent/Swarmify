@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Panel } from "@xyflow/react";
 import { create } from "zustand";
 
-export const NOTICE_DURATION_MS = 4000;
+const NOTICE_DURATION_MS = 4000;
 
 interface ImportNoticeState {
   messages: string[];
@@ -27,12 +27,13 @@ export function ImportNotice() {
     return () => clearTimeout(timer);
   }, [messages, hide]);
 
-  if (messages.length === 0) return null;
   return (
-    <Panel position="bottom-center" className="import-notice" role="status">
-      {messages.map((message, index) => (
-        <p key={index}>{message}</p>
-      ))}
+    <Panel position="bottom-center">
+      <div role="status" aria-live="polite" className={messages.length > 0 ? "import-notice" : undefined}>
+        {messages.map((message, index) => (
+          <p key={index}>{message}</p>
+        ))}
+      </div>
     </Panel>
   );
 }

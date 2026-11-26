@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -13,7 +13,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
-import { importImageFiles, type ImportedImage } from "./images";
+import { errorMessage, importImageFiles, type ImportedImage } from "./images";
 import { importClipboardImage } from "./clipboardImage";
 import { useImportNotice } from "./ImportNotice";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
@@ -39,10 +39,6 @@ function isEditable(target: EventTarget | null) {
 // Décalage horizontal entre les images importées ensemble, pour qu'elles ne se superposent pas.
 const IMPORT_SPACING = 500;
 
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 function spreadPositions(origin: XYPosition, count: number): XYPosition[] {
   return Array.from({ length: count }, (_, i) => ({ x: origin.x + i * IMPORT_SPACING, y: origin.y }));
 }
@@ -54,7 +50,7 @@ function showImportErrors(errors: string[]) {
 function importFiles(paths: string[], origin: XYPosition): Promise<void> {
   return importImageFiles(paths, spreadPositions(origin, paths.length)).then(
     showImportErrors,
-    (err: unknown) => showImportErrors([messageOf(err)]),
+    (err: unknown) => showImportErrors([errorMessage(err)]),
   );
 }
 
@@ -68,7 +64,7 @@ async function pickImageFiles(origin: XYPosition): Promise<void> {
     if (!paths || paths.length === 0) return;
     await importFiles(paths, origin);
   } catch (err) {
-    showImportErrors([messageOf(err)]);
+    showImportErrors([errorMessage(err)]);
   }
 }
 
@@ -88,28 +84,38 @@ function BoardCanvas() {
   const [menu, setMenu] = useState<{ x: number; y: number; flow: XYPosition } | null>(null);
   const { screenToFlowPosition } = useReactFlow();
   const closeMenu = useCallback(() => setMenu(null), []);
+  const pasteImageBusy = useRef(false);
 
-  // Une image du presse-papiers système passe avant le collage interne ; sans image, store.paste() est inchangé.
-  const pasteFromClipboard = useCallback(async () => {
-    let imported: ImportedImage | null;
-    try {
-      imported = await importClipboardImage();
-    } catch (err) {
-      showImportErrors([messageOf(err)]);
-      return;
-    }
-    if (!imported) {
-      useBoardStore.getState().paste();
-      return;
-    }
-    const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-    const { width, height } = imported.size;
-    useBoardStore.getState().addImageCard(
-      imported.asset,
-      { x: center.x - width / 2, y: center.y - height / 2 },
-      imported.size,
-    );
-  }, [screenToFlowPosition]);
+  // Priorité R12 : des cartes copiées passent avant l'image système, collage synchrone (le presse-papiers OS n'est pas lu).
+  // Sans carte copiée, une image du presse-papiers système est importée au centre de la vue. Un Ctrl+V maintenu
+  // ou un import déjà en cours ne relance pas l'encodage.
+  const pasteFromClipboard = useCallback(
+    async (isRepeat: boolean) => {
+      const store = useBoardStore.getState();
+      if (store.clipboard.length > 0) {
+        store.paste();
+        return;
+      }
+      if (isRepeat || pasteImageBusy.current) return;
+      pasteImageBusy.current = true;
+      try {
+        const imported: ImportedImage | null = await importClipboardImage();
+        if (!imported) return;
+        const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        const { width, height } = imported.size;
+        useBoardStore.getState().addImageCard(
+          imported.asset,
+          { x: center.x - width / 2, y: center.y - height / 2 },
+          imported.size,
+        );
+      } catch (err) {
+        showImportErrors([errorMessage(err)]);
+      } finally {
+        pasteImageBusy.current = false;
+      }
+    },
+    [screenToFlowPosition],
+  );
 
   // Les fichiers déposés depuis l'Explorateur arrivent en pixels physiques, relatifs à la fenêtre.
   useEffect(() => {
@@ -160,7 +166,7 @@ function BoardCanvas() {
       } else if (mod && key === "c") {
         store.copySelected();
       } else if (mod && key === "v") {
-        void pasteFromClipboard();
+        void pasteFromClipboard(e.repeat);
       } else if (mod && (key === "y" || (key === "z" && e.shiftKey))) {
         store.redo();
       } else if (mod && key === "z") {

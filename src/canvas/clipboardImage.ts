@@ -11,7 +11,8 @@ async function encodePng(rgba: Uint8Array, width: number, height: number): Promi
   canvas.height = height;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Canvas indisponible");
-  context.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+  const pixels = new Uint8ClampedArray(rgba.buffer as ArrayBuffer, rgba.byteOffset, rgba.byteLength);
+  context.putImageData(new ImageData(pixels, width, height), 0, 0);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Encodage PNG impossible");
   return new Uint8Array(await blob.arrayBuffer());
@@ -39,6 +40,6 @@ export async function importClipboardImage(): Promise<ImportedImage | null> {
     });
     return await describeImport(imported, "Presse-papiers.png");
   } finally {
-    await image.close();
+    await image.close().catch(() => {});
   }
 }

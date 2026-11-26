@@ -60,7 +60,7 @@ function basename(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
 }
 
-function errorMessage(err: unknown): string {
+export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
