@@ -17,7 +17,7 @@ export function fitImageSize(natural: { width: number; height: number }): { widt
   };
 }
 
-interface ImageImport {
+export interface ImageImport {
   file: string;
   path: string;
   format: ImageFormat;
@@ -74,9 +74,14 @@ export function measureImage(src: string): Promise<{ width: number; height: numb
 }
 
 // Copie l'image dans images/ puis mesure la copie. Ne crée pas de carte.
-// Un SVG est assaini avant la mesure (R9) : la copie stockée est réécrite avec sa version propre.
 export async function importImageAsset(path: string): Promise<ImportedImage> {
   const imported = await invoke<ImageImport>("import_image", { sourcePath: path });
+  return describeImport(imported, basename(path));
+}
+
+// Mesure une copie déjà stockée dans images/ et construit son asset.
+// Un SVG est assaini avant la mesure (R9) : la copie stockée est réécrite avec sa version propre.
+export async function describeImport(imported: ImageImport, originalName: string): Promise<ImportedImage> {
   if (imported.format === "svg") await sanitizeStoredSvg(imported);
   const measured = await measureImage(convertFileSrc(imported.path));
   // Un SVG sans dimensions intrinsèques mesure 0 × 0 : on retient la taille par défaut.
@@ -85,7 +90,7 @@ export async function importImageAsset(path: string): Promise<ImportedImage> {
     asset: {
       file: imported.file,
       format: imported.format,
-      originalName: basename(path),
+      originalName,
       bytes: imported.bytes,
       width: natural.width,
       height: natural.height,

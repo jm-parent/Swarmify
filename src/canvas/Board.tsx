@@ -13,7 +13,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
-import { importImageFiles } from "./images";
+import { importImageFiles, type ImportedImage } from "./images";
+import { importClipboardImage } from "./clipboardImage";
 import { useImportNotice } from "./ImportNotice";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
 import { ZoomBar } from "./ZoomBar";
@@ -88,6 +89,28 @@ function BoardCanvas() {
   const { screenToFlowPosition } = useReactFlow();
   const closeMenu = useCallback(() => setMenu(null), []);
 
+  // Une image du presse-papiers système passe avant le collage interne ; sans image, store.paste() est inchangé.
+  const pasteFromClipboard = useCallback(async () => {
+    let imported: ImportedImage | null;
+    try {
+      imported = await importClipboardImage();
+    } catch (err) {
+      showImportErrors([messageOf(err)]);
+      return;
+    }
+    if (!imported) {
+      useBoardStore.getState().paste();
+      return;
+    }
+    const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    const { width, height } = imported.size;
+    useBoardStore.getState().addImageCard(
+      imported.asset,
+      { x: center.x - width / 2, y: center.y - height / 2 },
+      imported.size,
+    );
+  }, [screenToFlowPosition]);
+
   // Les fichiers déposés depuis l'Explorateur arrivent en pixels physiques, relatifs à la fenêtre.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -137,7 +160,7 @@ function BoardCanvas() {
       } else if (mod && key === "c") {
         store.copySelected();
       } else if (mod && key === "v") {
-        store.paste();
+        void pasteFromClipboard();
       } else if (mod && (key === "y" || (key === "z" && e.shiftKey))) {
         store.redo();
       } else if (mod && key === "z") {
@@ -160,7 +183,7 @@ function BoardCanvas() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [pasteFromClipboard]);
 
   return (
     <ReactFlow
