@@ -67,7 +67,7 @@ function duplicatePastedImages(ids: string[]) {
           height: copy.height,
         });
       })
-      .catch((err: unknown) => showImportErrors([errorMessage(err)]));
+      .catch((err: unknown) => showImportErrors([`Copie du collage impossible : ${errorMessage(err)}`]));
   }
 }
 
