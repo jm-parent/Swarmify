@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import {
   assertSvgRoot,
   DEFAULT_SVG_SIZE,
+  duplicateImageAsset,
   fitImageSize,
   imagesFolderFor,
   importImageAsset,
@@ -13,6 +15,7 @@ import {
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: (path: string) => path,
   invoke: vi.fn(async (command: string) => {
+    if (command === "images_dir") return "C:\\data\\images";
     if (command === "import_image") return { file: "a.svg", format: "svg", path: "C:\\images\\a.svg", bytes: 10 };
     if (command === "read_text_file") throw "permission refusée";
     throw new Error(`commande inattendue : ${command}`);
@@ -126,5 +129,20 @@ describe("images", () => {
 
   it("refuse un import sans position pour chaque fichier, avant tout appel système", async () => {
     await expect(importImageFiles(["a.png", "b.png"], [{ x: 0, y: 0 }])).rejects.toThrow("positions manquantes");
+  });
+
+  it("copie une image de images/ en passant son chemin stocké comme source de import_image", async () => {
+    const uuid = "0f1e2d3c-4b5a-4968-8777-a6b5c4d3e2f1";
+    vi.mocked(invoke).mockClear();
+
+    await expect(duplicateImageAsset(`${uuid}.svg`)).rejects.toThrow("Lecture du SVG impossible");
+    expect(invoke).toHaveBeenCalledWith("import_image", { sourcePath: `C:\\data\\images\\${uuid}.svg` });
+  });
+
+  it("refuse un nom hors images/ avant tout appel de copie", async () => {
+    vi.mocked(invoke).mockClear();
+
+    await expect(duplicateImageAsset("..\\secret.png")).rejects.toThrow("Nom de fichier image invalide");
+    expect(invoke).not.toHaveBeenCalledWith("import_image", expect.anything());
   });
 });

@@ -13,7 +13,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
-import { errorMessage, IMAGE_DIALOG_FILTERS, importImageFiles, type ImportedImage } from "./images";
+import { errorMessage, IMAGE_DIALOG_FILTERS, duplicateImageAsset, importImageFiles, type ImportedImage } from "./images";
 import { importClipboardImage } from "./clipboardImage";
 import { useImportNotice } from "./ImportNotice";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
@@ -45,6 +45,30 @@ function spreadPositions(origin: XYPosition, count: number): XYPosition[] {
 
 function showImportErrors(errors: string[]) {
   if (errors.length > 0) useImportNotice.getState().show(errors);
+}
+
+// Après un collage, chaque image reçoit sa propre copie en arrière-plan. La carte pointe déjà sur le fichier d'origine
+// et le patch n'ajoute aucun point d'annulation. Une carte supprimée ou une image remplacée entre-temps n'est pas touchée.
+function duplicatePastedImages(ids: string[]) {
+  for (const id of ids) {
+    const original = useBoardStore.getState().nodes.find((n) => n.id === id)?.data.image;
+    if (!original) continue;
+    void duplicateImageAsset(original.file)
+      .then((copy) => {
+        const store = useBoardStore.getState();
+        const current = store.nodes.find((n) => n.id === id)?.data.image;
+        if (!current || current.file !== original.file) return;
+        store.patchImageAsset(id, {
+          ...current,
+          file: copy.file,
+          format: copy.format,
+          bytes: copy.bytes,
+          width: copy.width,
+          height: copy.height,
+        });
+      })
+      .catch((err: unknown) => showImportErrors([errorMessage(err)]));
+  }
 }
 
 function importFiles(paths: string[], origin: XYPosition): Promise<void> {
@@ -90,7 +114,7 @@ function BoardCanvas() {
     async (isRepeat: boolean) => {
       const store = useBoardStore.getState();
       if (store.clipboard.length > 0) {
-        store.paste();
+        duplicatePastedImages(store.paste());
         return;
       }
       if (isRepeat || pasteImageBusy.current) return;

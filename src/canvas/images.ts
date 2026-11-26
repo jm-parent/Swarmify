@@ -32,6 +32,14 @@ export interface ImportedImage {
 // Une seule résolution de images_dir par session ; un échec n'est pas gardé, il sera réessayé.
 let imagesDir: Promise<string> | undefined;
 
+function imagesDirPath(): Promise<string> {
+  imagesDir ??= invoke<string>("images_dir").catch((err: unknown) => {
+    imagesDir = undefined;
+    throw err;
+  });
+  return imagesDir;
+}
+
 // Même forme que validate_file_name côté Rust : `<uuid>.<ext>`, JPEG stocké en `.jpg`.
 const IMAGE_FILE_NAME = /^[0-9a-f-]{36}\.(png|jpg|gif|webp|svg)$/;
 
@@ -59,12 +67,17 @@ export const IMAGE_DIALOG_FILTERS = [{ name: "Images", extensions: ["png", "jpg"
 // Le nom vient du store SQLite (frontière de confiance) : il ne doit jamais sortir de images/.
 export async function imageSrc(file: string): Promise<string> {
   if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
-  imagesDir ??= invoke<string>("images_dir").catch((err: unknown) => {
-    imagesDir = undefined;
-    throw err;
-  });
-  const dir = await imagesDir;
-  return convertFileSrc(joinImagePath(dir, file));
+  return convertFileSrc(joinImagePath(await imagesDirPath(), file));
+}
+
+// Copie une image déjà stockée dans images/ : import_image prend ce fichier comme source et crée un nouveau nom.
+// Renvoie l'asset de la copie (originalName et addedAt y sont ceux de la copie : l'appelant garde ceux de l'original).
+export async function duplicateImageAsset(file: string): Promise<ImageAsset> {
+  if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
+  const sourcePath = joinImagePath(await imagesDirPath(), file);
+  const imported = await invoke<ImageImport>("import_image", { sourcePath });
+  const { asset } = await describeImport(imported, file);
+  return asset;
 }
 
 function basename(path: string): string {
