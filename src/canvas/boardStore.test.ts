@@ -3,6 +3,16 @@ import { useBoardStore } from "./boardStore";
 
 const { getState, setState } = useBoardStore;
 
+const imageAsset = {
+  file: "a.png",
+  format: "png" as const,
+  originalName: "photo.png",
+  bytes: 10,
+  width: 960,
+  height: 640,
+  addedAt: "2026-01-01T00:00:00.000Z",
+};
+
 function seedNodes() {
   setState({
     nodes: [
@@ -98,6 +108,59 @@ describe("boardStore", () => {
 
     getState().undo();
     expect(getState().nodes[2].data.image).toEqual(asset);
+  });
+
+  it("annule l'ajout d'une carte image", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    expect(getState().nodes).toHaveLength(3);
+
+    getState().undo();
+    expect(getState().nodes.map((n) => n.id)).toEqual(["n1", "n2"]);
+  });
+
+  it("restaure une carte image supprimée avec son image intacte", () => {
+    const id = getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    getState().deleteSelected();
+    expect(getState().nodes.map((n) => n.id)).toEqual(["n1", "n2"]);
+
+    getState().undo();
+    expect(getState().nodes[2]).toMatchObject({ id, data: { image: imageAsset } });
+  });
+
+  it("remplace l'asset d'une carte sans ajouter de point d'annulation", () => {
+    const id = getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    const pastLength = getState().past.length;
+    const copy = { ...imageAsset, file: "copie.png", bytes: 20 };
+
+    getState().patchImageAsset(id, copy);
+
+    expect(getState().past).toHaveLength(pastLength);
+    expect(getState().nodes[2]).toMatchObject({ position: { x: 5, y: 6 }, width: 480, height: 320, data: { image: copy } });
+  });
+
+  it("ignore le patch d'une carte absente", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    const before = getState().nodes;
+    const pastLength = getState().past.length;
+
+    getState().patchImageAsset("absente", { ...imageAsset, file: "copie.png" });
+
+    expect(getState().nodes).toBe(before);
+    expect(getState().past).toHaveLength(pastLength);
+  });
+
+  it("annule un collage d'image en retirant la copie et garde l'original", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    const before = getState().nodes;
+    getState().copySelected();
+
+    const [pastedId] = getState().paste();
+    getState().patchImageAsset(pastedId, { ...imageAsset, file: "copie.png" });
+    expect(getState().nodes).toHaveLength(4);
+
+    getState().undo();
+    expect(getState().nodes).toEqual(before);
+    expect(getState().nodes[2].data.image).toEqual(imageAsset);
   });
 
   it("ne crée pas de point d'annulation quand la carte n'existe plus", () => {

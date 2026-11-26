@@ -57,12 +57,13 @@ export interface BoardState {
   addCard: (type: CardType, position: XYPosition) => string;
   addImageCard: (asset: ImageAsset, position: XYPosition, size: { width: number; height: number }) => string;
   replaceImage: (id: string, asset: ImageAsset) => void;
+  patchImageAsset: (id: string, asset: ImageAsset) => void;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   removeCard: (id: string) => void;
   clearSelection: () => void;
   copySelected: () => void;
-  paste: () => void;
+  paste: () => string[];
   undo: () => void;
   redo: () => void;
 }
@@ -118,6 +119,14 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     }));
   },
 
+  // Change seulement l'asset d'une carte (copie en arrière-plan). Pas de point d'annulation : le collage reste annulable tel quel.
+  patchImageAsset: (id, asset) => {
+    if (!get().nodes.some((n) => n.id === id)) return;
+    set((s) => ({
+      nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, image: asset } } : n)),
+    }));
+  },
+
   updateCard: (id, patch) =>
     set((s) => ({
       nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)),
@@ -144,7 +153,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   paste: () => {
     const { clipboard } = get();
-    if (clipboard.length === 0) return;
+    if (clipboard.length === 0) return [];
     get().checkpoint();
     const pasted = clipboard.map((n) => ({
       ...structuredClone(n),
@@ -155,6 +164,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     set((s) => ({
       nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), ...pasted],
     }));
+    return pasted.map((n) => n.id);
   },
 
   undo: () => {
