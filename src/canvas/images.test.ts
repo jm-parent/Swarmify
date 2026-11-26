@@ -3,6 +3,7 @@ import {
   assertSvgRoot,
   DEFAULT_SVG_SIZE,
   fitImageSize,
+  imagesFolderFor,
   importImageAsset,
   importImageFiles,
   isImageFileName,
@@ -63,6 +64,13 @@ describe("images", () => {
   it("joint le dossier et le nom avec le séparateur déjà présent dans le dossier", () => {
     expect(joinImagePath("C:\\Users\\me\\AppData\\images", "f.png")).toBe("C:\\Users\\me\\AppData\\images\\f.png");
     expect(joinImagePath("/home/me/.local/share/images", "f.png")).toBe("/home/me/.local/share/images/f.png");
+  });
+
+  it("nomme le dossier des images d'un board `<nom sans extension>-images` à côté du fichier", () => {
+    expect(imagesFolderFor("C:\\dir\\board.json")).toBe("C:\\dir\\board-images");
+    expect(imagesFolderFor("/tmp/a/x.json")).toBe("/tmp/a/x-images");
+    expect(imagesFolderFor("C:\\dir\\board")).toBe("C:\\dir\\board-images");
+    expect(imagesFolderFor("/home/me/.config/board")).toBe("/home/me/.config/board-images");
   });
 
   it("refuse un SVG vide ou sans racine <svg après assainissement", () => {

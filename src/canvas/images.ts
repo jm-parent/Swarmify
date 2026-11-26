@@ -45,6 +45,17 @@ export function joinImagePath(dir: string, file: string): string {
   return `${dir}${sep}${file}`;
 }
 
+// Dossier des images d'un board exporté : `<dossier>/<nom sans extension>-images`, à côté du fichier.
+export function imagesFolderFor(path: string): string {
+  const lastSeparator = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
+  const lastDot = path.lastIndexOf(".");
+  const stem = lastDot > lastSeparator ? path.slice(0, lastDot) : path;
+  return `${stem}-images`;
+}
+
+// Filtre du sélecteur d'images (menu « Image » et remplacement d'une image manquante).
+export const IMAGE_DIALOG_FILTERS = [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }];
+
 // Le nom vient du store SQLite (frontière de confiance) : il ne doit jamais sortir de images/.
 export async function imageSrc(file: string): Promise<string> {
   if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
