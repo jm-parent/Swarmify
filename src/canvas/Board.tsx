@@ -19,8 +19,9 @@ import { RadialMenu, type RadialItem } from "./RadialMenu";
 import { NoteCard } from "./cards/NoteCard";
 import { KanbanCard } from "./cards/KanbanCard";
 import { AgentCard } from "./cards/AgentCard";
+import { ImageCard } from "./cards/ImageCard";
 
-const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard } satisfies NodeTypes;
+const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard, image: ImageCard } satisfies NodeTypes;
 
 function isEditable(target: EventTarget | null) {
   return (
