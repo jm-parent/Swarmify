@@ -1,9 +1,25 @@
-import type { BoardNode, CardStatus } from "./types";
+import type { BoardNode, CardStatus, ImageFormat } from "./types";
 
 export const BOARD_FILE_VERSION = 1;
 
-const CARD_TYPES = ["note", "kanban", "agent"];
+const CARD_TYPES = ["note", "kanban", "agent", "image"];
 const CARD_STATUSES: CardStatus[] = ["idle", "active", "running", "waiting", "error"];
+const IMAGE_FILE_PATTERN = /^[0-9a-f-]{36}\.(png|jpg|gif|webp|svg)$/;
+const IMAGE_FORMATS: ImageFormat[] = ["png", "jpeg", "gif", "webp", "svg"];
+
+function isValidImage(image: any): boolean {
+  return (
+    typeof image === "object" &&
+    image !== null &&
+    typeof image.file === "string" &&
+    IMAGE_FILE_PATTERN.test(image.file) &&
+    IMAGE_FORMATS.includes(image.format) &&
+    typeof image.width === "number" &&
+    image.width > 0 &&
+    typeof image.height === "number" &&
+    image.height > 0
+  );
+}
 
 export function serializeBoard(nodes: BoardNode[]): string {
   const stored = nodes.map(({ id, type, position, width, height, data }) => ({
@@ -33,7 +49,8 @@ export function parseBoard(text: string): BoardNode[] {
       typeof raw.position?.y === "number" &&
       typeof raw.data?.title === "string" &&
       CARD_STATUSES.includes(raw.data?.status) &&
-      (raw.type !== "agent" || typeof raw.data?.terminal?.sessionId === "string");
+      (raw.type !== "agent" || typeof raw.data?.terminal?.sessionId === "string") &&
+      (raw.type !== "image" || isValidImage(raw.data?.image));
     if (!valid) throw new Error("Fichier de board invalide.");
     // Aucun processus ne survit à la fermeture de l'app : un statut d'exécution restauré devient « idle ».
     const status = ["running", "active", "waiting"].includes(raw.data.status) ? "idle" : raw.data.status;

@@ -30,4 +30,40 @@ describe("boardFile", () => {
     const text = JSON.stringify({ version: 1, nodes: [{ ...node, type: "web" }] });
     expect(() => parseBoard(text)).toThrow("invalide");
   });
+
+  it("accepte une carte image valide", () => {
+    const image: BoardNode = {
+      id: "img1",
+      type: "image",
+      position: { x: 0, y: 0 },
+      width: 480,
+      height: 360,
+      data: {
+        title: "logo.svg",
+        status: "idle",
+        image: {
+          file: "0b1c2d3e-4f50-4617-8899-aabbccddeeff.svg",
+          format: "svg",
+          originalName: "logo.svg",
+          bytes: 1024,
+          width: 480,
+          height: 360,
+          addedAt: "2026-11-26T08:00:00.000Z",
+        },
+      },
+    };
+    const [restored] = parseBoard(serializeBoard([image]));
+    expect(restored.data.image).toEqual(image.data.image);
+  });
+
+  it("refuse une carte image sans fichier image valide", () => {
+    const image = {
+      id: "img1",
+      type: "image",
+      position: { x: 0, y: 0 },
+      data: { title: "logo", status: "idle", image: { format: "png", width: 10, height: 10 } },
+    };
+    const text = JSON.stringify({ version: 1, nodes: [image] });
+    expect(() => parseBoard(text)).toThrow("invalide");
+  });
 });
