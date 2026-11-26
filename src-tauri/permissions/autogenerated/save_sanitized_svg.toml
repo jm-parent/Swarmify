@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-sanitized-svg"
+description = "Enables the save_sanitized_svg command without any pre-configured scope."
+commands.allow = ["save_sanitized_svg"]
+
+[[permission]]
+identifier = "deny-save-sanitized-svg"
+description = "Denies the save_sanitized_svg command without any pre-configured scope."
+commands.deny = ["save_sanitized_svg"]
