@@ -47,7 +47,7 @@ export function ImageCard({ id, data, selected }: NodeProps<BoardNode>) {
   }
 
   return (
-    <CardFrame id={id} data={data} selected={selected}>
+    <CardFrame id={id} data={data} selected={selected} keepAspectRatio>
       {missing ? (
         <div className="image-missing">
           <p>Image introuvable</p>

@@ -9,17 +9,25 @@ interface CardFrameProps {
   selected: boolean;
   // Bouton d'action placé à droite de l'en-tête (ex. fermer une session).
   headerAction?: ReactNode;
+  // Garde les proportions au redimensionnement (cartes image).
+  keepAspectRatio?: boolean;
   children: ReactNode;
 }
 
 // Cadre commun à tous les types de cartes : titre, statut, redimensionnement.
-export function CardFrame({ id, data, selected, headerAction, children }: CardFrameProps) {
+export function CardFrame({ id, data, selected, headerAction, keepAspectRatio, children }: CardFrameProps) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const checkpoint = useBoardStore((s) => s.checkpoint);
 
   return (
     <div className={`card status-${data.status}${selected ? " selected" : ""}`}>
-      <NodeResizer isVisible={selected} minWidth={180} minHeight={120} onResizeStart={checkpoint} />
+      <NodeResizer
+        isVisible={selected}
+        minWidth={180}
+        minHeight={120}
+        keepAspectRatio={keepAspectRatio}
+        onResizeStart={checkpoint}
+      />
       <div className="card-header">
         <span className="card-status" aria-label={data.status} />
         <input
