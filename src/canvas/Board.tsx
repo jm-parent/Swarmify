@@ -48,18 +48,16 @@ function showImportErrors(errors: string[]) {
 }
 
 // Après un collage, chaque image reçoit sa propre copie en arrière-plan. La carte pointe déjà sur le fichier d'origine
-// et le patch n'ajoute aucun point d'annulation. Une carte supprimée ou une image remplacée entre-temps n'est pas touchée.
+// et le patch n'ajoute aucun point d'annulation. Seuls les états encore sur le fichier d'origine sont mis à jour : une carte
+// supprimée ou une image remplacée entre-temps n'est pas touchée.
 function duplicatePastedImages(ids: string[]) {
   for (const id of ids) {
     const original = useBoardStore.getState().nodes.find((n) => n.id === id)?.data.image;
     if (!original) continue;
     void duplicateImageAsset(original.file)
       .then((copy) => {
-        const store = useBoardStore.getState();
-        const current = store.nodes.find((n) => n.id === id)?.data.image;
-        if (!current || current.file !== original.file) return;
-        store.patchImageAsset(id, {
-          ...current,
+        useBoardStore.getState().patchImageAsset(id, original.file, {
+          ...original,
           file: copy.file,
           format: copy.format,
           bytes: copy.bytes,

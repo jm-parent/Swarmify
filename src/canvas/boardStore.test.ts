@@ -132,7 +132,7 @@ describe("boardStore", () => {
     const pastLength = getState().past.length;
     const copy = { ...imageAsset, file: "copie.png", bytes: 20 };
 
-    getState().patchImageAsset(id, copy);
+    getState().patchImageAsset(id, imageAsset.file, copy);
 
     expect(getState().past).toHaveLength(pastLength);
     expect(getState().nodes[2]).toMatchObject({ position: { x: 5, y: 6 }, width: 480, height: 320, data: { image: copy } });
@@ -143,7 +143,7 @@ describe("boardStore", () => {
     const before = getState().nodes;
     const pastLength = getState().past.length;
 
-    getState().patchImageAsset("absente", { ...imageAsset, file: "copie.png" });
+    getState().patchImageAsset("absente", imageAsset.file, { ...imageAsset, file: "copie.png" });
 
     expect(getState().nodes).toBe(before);
     expect(getState().past).toHaveLength(pastLength);
@@ -155,7 +155,7 @@ describe("boardStore", () => {
     getState().copySelected();
 
     const [pastedId] = getState().paste();
-    getState().patchImageAsset(pastedId, { ...imageAsset, file: "copie.png" });
+    getState().patchImageAsset(pastedId, imageAsset.file, { ...imageAsset, file: "copie.png" });
     expect(getState().nodes).toHaveLength(4);
 
     getState().undo();
@@ -170,7 +170,7 @@ describe("boardStore", () => {
     getState().addCard("note", { x: 900, y: 0 });
     const copy = { ...imageAsset, file: "copie.png" };
 
-    getState().patchImageAsset(pastedId, copy);
+    getState().patchImageAsset(pastedId, imageAsset.file, copy);
     getState().undo();
 
     expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
@@ -184,10 +184,24 @@ describe("boardStore", () => {
     const copy = { ...imageAsset, file: "copie.png" };
 
     getState().undo();
-    getState().patchImageAsset(pastedId, copy);
+    getState().patchImageAsset(pastedId, imageAsset.file, copy);
     getState().redo();
 
     expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
+  });
+
+  it("ne touche pas à l'état refait quand la copie finit après un remplacement annulé", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    getState().copySelected();
+    const [pastedId] = getState().paste();
+    const replacement = { ...imageAsset, file: "b.png", originalName: "autre.png", bytes: 20 };
+    getState().replaceImage(pastedId, replacement);
+
+    getState().undo();
+    getState().patchImageAsset(pastedId, imageAsset.file, { ...imageAsset, file: "copie.png" });
+    getState().redo();
+
+    expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(replacement);
   });
 
   it("ne crée pas de point d'annulation quand la carte n'existe plus", () => {

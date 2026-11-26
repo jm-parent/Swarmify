@@ -57,7 +57,7 @@ export interface BoardState {
   addCard: (type: CardType, position: XYPosition) => string;
   addImageCard: (asset: ImageAsset, position: XYPosition, size: { width: number; height: number }) => string;
   replaceImage: (id: string, asset: ImageAsset) => void;
-  patchImageAsset: (id: string, asset: ImageAsset) => void;
+  patchImageAsset: (id: string, fromFile: string, asset: ImageAsset) => void;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   removeCard: (id: string) => void;
@@ -121,10 +121,13 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   // Change seulement l'asset d'une carte (copie en arrière-plan). Pas de point d'annulation : le collage reste annulable tel quel.
   // Les instantanés de l'historique sont mis à jour aussi, sinon annuler ramènerait le fichier d'origine.
-  patchImageAsset: (id, asset) => {
+  // Seul un état dont l'image est encore fromFile est mis à jour : un remplacement fait entre-temps n'est pas écrasé.
+  patchImageAsset: (id, fromFile, asset) => {
     if (!get().nodes.some((n) => n.id === id)) return;
     const withAsset = (nodes: BoardNode[]) =>
-      nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, image: asset } } : n));
+      nodes.map((n) =>
+        n.id === id && n.data.image?.file === fromFile ? { ...n, data: { ...n.data, image: asset } } : n,
+      );
     set((s) => ({
       nodes: withAsset(s.nodes),
       past: s.past.map(withAsset),
