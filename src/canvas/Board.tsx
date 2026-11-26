@@ -206,8 +206,8 @@ function BoardCanvas() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Space sur un bouton l'active (Supprimer, Remplacer) au lieu de déclencher le pan.
-      if (e.code === "Space" && e.target instanceof HTMLButtonElement) return;
+      // Space sur le bouton Supprimer / Remplacer d'une carte manquante l'active au lieu de déclencher le pan.
+      if (e.code === "Space" && e.target instanceof HTMLButtonElement && e.target.closest(".image-missing")) return;
       if (isEditable(e.target)) return;
       const store = useBoardStore.getState();
       const mod = e.ctrlKey || e.metaKey;
