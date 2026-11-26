@@ -411,6 +411,19 @@ body,
   text-align: center;
 }
 
+.import-notice {
+  max-width: 420px;
+  padding: 8px 12px;
+  border-radius: var(--r-card);
+  background: var(--danger-tint);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.import-notice p {
+  margin: 2px 0;
+}
+
 .note-toolbar {
   display: flex;
   justify-content: flex-end;
