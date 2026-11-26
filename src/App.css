@@ -411,6 +411,33 @@ body,
   text-align: center;
 }
 
+.image-missing {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.image-missing p {
+  margin: 0;
+}
+
+.image-missing-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.image-missing button {
+  font: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
 .import-notice {
   max-width: 420px;
   padding: 8px 12px;

@@ -13,7 +13,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useBoardStore } from "./boardStore";
-import { errorMessage, importImageFiles, type ImportedImage } from "./images";
+import { errorMessage, IMAGE_DIALOG_FILTERS, importImageFiles, type ImportedImage } from "./images";
 import { importClipboardImage } from "./clipboardImage";
 import { useImportNotice } from "./ImportNotice";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom";
@@ -57,10 +57,7 @@ function importFiles(paths: string[], origin: XYPosition): Promise<void> {
 // Annuler le sélecteur renvoie null : rien à faire.
 async function pickImageFiles(origin: XYPosition): Promise<void> {
   try {
-    const paths = await open({
-      multiple: true,
-      filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }],
-    });
+    const paths = await open({ multiple: true, filters: IMAGE_DIALOG_FILTERS });
     if (!paths || paths.length === 0) return;
     await importFiles(paths, origin);
   } catch (err) {
