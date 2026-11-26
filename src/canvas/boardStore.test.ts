@@ -163,6 +163,33 @@ describe("boardStore", () => {
     expect(getState().nodes[2].data.image).toEqual(imageAsset);
   });
 
+  it("met la copie dans le point d'annulation pris entre le collage et la copie", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    getState().copySelected();
+    const [pastedId] = getState().paste();
+    getState().addCard("note", { x: 900, y: 0 });
+    const copy = { ...imageAsset, file: "copie.png" };
+
+    getState().patchImageAsset(pastedId, copy);
+    getState().undo();
+
+    expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
+  });
+
+  it("met la copie dans l'état refait après un collage annulé avant la fin de la copie", () => {
+    getState().addImageCard(imageAsset, { x: 5, y: 6 }, { width: 480, height: 320 });
+    getState().copySelected();
+    const [pastedId] = getState().paste();
+    getState().addCard("note", { x: 900, y: 0 });
+    const copy = { ...imageAsset, file: "copie.png" };
+
+    getState().undo();
+    getState().patchImageAsset(pastedId, copy);
+    getState().redo();
+
+    expect(getState().nodes.find((n) => n.id === pastedId)?.data.image).toEqual(copy);
+  });
+
   it("ne crée pas de point d'annulation quand la carte n'existe plus", () => {
     const asset = {
       file: "b.png",

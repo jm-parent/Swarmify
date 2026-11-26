@@ -120,10 +120,15 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
   },
 
   // Change seulement l'asset d'une carte (copie en arrière-plan). Pas de point d'annulation : le collage reste annulable tel quel.
+  // Les instantanés de l'historique sont mis à jour aussi, sinon annuler ramènerait le fichier d'origine.
   patchImageAsset: (id, asset) => {
     if (!get().nodes.some((n) => n.id === id)) return;
+    const withAsset = (nodes: BoardNode[]) =>
+      nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, image: asset } } : n));
     set((s) => ({
-      nodes: s.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, image: asset } } : n)),
+      nodes: withAsset(s.nodes),
+      past: s.past.map(withAsset),
+      future: s.future.map(withAsset),
     }));
   },
 
