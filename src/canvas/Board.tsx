@@ -40,7 +40,7 @@ const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard, image:
 function isEditable(target: EventTarget | null) {
   return (
     target instanceof HTMLElement &&
-    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName))
+    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
   );
 }
 
@@ -206,6 +206,8 @@ function BoardCanvas() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Space sur un bouton l'active (Supprimer, Remplacer) au lieu de déclencher le pan.
+      if (e.code === "Space" && e.target instanceof HTMLButtonElement) return;
       if (isEditable(e.target)) return;
       const store = useBoardStore.getState();
       const mod = e.ctrlKey || e.metaKey;
