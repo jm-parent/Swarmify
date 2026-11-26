@@ -2,6 +2,7 @@ use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::fs;
 use std::hash::{BuildHasher, Hasher};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -120,7 +121,9 @@ fn is_svg(bytes: &[u8]) -> bool {
             None => return false,
         }
     }
-    rest.starts_with(b"<svg")
+    rest.strip_prefix(b"<svg")
+        .and_then(|after| after.first())
+        .is_some_and(|b| b.is_ascii_whitespace() || *b == b'>' || *b == b'/')
 }
 
 fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -137,7 +140,8 @@ pub fn check_import(ext: &str, bytes: &[u8]) -> Result<ImageFormat, String> {
     Ok(format)
 }
 
-// Not an RFC 4122 UUID: 128 bits from SipHash keyed by OS randomness, time and a counter.
+// Not an RFC 4122 UUID: 128 bits from two SipHash hashers built from RandomState, fed with time, a counter
+// and the process id. RandomState keys are drawn from OS randomness once per thread, then incremented per instance.
 pub fn new_file_stem() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let nanos = SystemTime::now()
@@ -208,14 +212,44 @@ pub fn images_dir(app: AppHandle) -> Result<PathBuf, String> {
     app_images_dir(&app)
 }
 
+// Reads at most MAX_IMAGE_BYTES + 1 bytes, so a file growing after any metadata check cannot exhaust memory.
+fn read_capped(path: &Path) -> Result<Vec<u8>, String> {
+    let read_error = |e: std::io::Error| format!("Lecture impossible : {e}");
+    let mut bytes = Vec::new();
+    fs::File::open(path)
+        .map_err(read_error)?
+        .take(MAX_IMAGE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(read_error)?;
+    check_size(bytes.len() as u64)?;
+    Ok(bytes)
+}
+
+// Rejects oversize base64 before decoding it.
+fn decode_base64_capped(data_base64: &str) -> Result<Vec<u8>, String> {
+    if data_base64.len() > (MAX_IMAGE_BYTES as usize).div_ceil(3) * 4 {
+        return Err(TOO_LARGE_ERROR.to_string());
+    }
+    BASE64_STANDARD
+        .decode(data_base64)
+        .map_err(|e| format!("Image invalide : {e}"))
+}
+
+// Checks the size and that the contents are an SVG document.
+fn check_svg_contents(contents: &str) -> Result<(), String> {
+    check_size(contents.len() as u64)?;
+    if detect_format(contents.as_bytes()) != Some(ImageFormat::Svg) {
+        return Err("Format non supporté : contenu incompatible avec .svg".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn import_image(app: AppHandle, source_path: PathBuf) -> Result<ImageImport, String> {
     let dir = app_images_dir(&app)?;
     let ext = source_path.extension().and_then(|e| e.to_str()).unwrap_or("");
     format_from_extension(ext)?;
-    let read_error = |e: std::io::Error| format!("Lecture impossible : {e}");
-    check_size(fs::metadata(&source_path).map_err(read_error)?.len())?;
-    let bytes = fs::read(&source_path).map_err(read_error)?;
+    let bytes = read_capped(&source_path)?;
     let format = check_import(ext, &bytes)?;
     store_image(&dir, format, &bytes)
 }
@@ -224,9 +258,7 @@ pub fn import_image(app: AppHandle, source_path: PathBuf) -> Result<ImageImport,
 pub fn save_image_bytes(app: AppHandle, format: String, data_base64: String) -> Result<ImageImport, String> {
     let dir = app_images_dir(&app)?;
     format_from_extension(&format)?;
-    let bytes = BASE64_STANDARD
-        .decode(data_base64)
-        .map_err(|e| format!("Image invalide : {e}"))?;
+    let bytes = decode_base64_capped(&data_base64)?;
     let kind = check_import(&format, &bytes)?;
     store_image(&dir, kind, &bytes)
 }
@@ -237,6 +269,7 @@ pub fn save_sanitized_svg(app: AppHandle, file: String, contents: String) -> Res
     if !file.ends_with(".svg") {
         return Err(format!("Fichier SVG attendu : {file}"));
     }
+    check_svg_contents(&contents)?;
     let path = app_images_dir(&app)?.join(&file);
     if !path.is_file() {
         return Err(format!("Image introuvable : {file}"));
@@ -299,6 +332,45 @@ mod tests {
         );
         assert_eq!(detect_format(BMP), None);
         assert_eq!(detect_format(b"RIFF\x00\x00\x00\x00AVI "), None);
+    }
+
+    #[test]
+    fn images_exige_une_racine_svg_exacte() {
+        assert_eq!(detect_format(b"<svg>"), Some(ImageFormat::Svg));
+        assert_eq!(detect_format(b"<svg\n xmlns=\"http://www.w3.org/2000/svg\"/>"), Some(ImageFormat::Svg));
+        assert_eq!(detect_format(b"<svgfoo/>"), None);
+        assert_eq!(detect_format(b"<svg"), None);
+    }
+
+    #[test]
+    fn images_rejette_un_base64_trop_long_avant_decodage() {
+        let limit = (MAX_IMAGE_BYTES as usize).div_ceil(3) * 4;
+        // Invalid base64: a decode attempt would fail with "Image invalide" instead of the size error.
+        let oversize = "!".repeat(limit + 1);
+        assert_eq!(decode_base64_capped(&oversize), Err(TOO_LARGE_ERROR.to_string()));
+        assert_eq!(decode_base64_capped("aGk="), Ok(b"hi".to_vec()));
+    }
+
+    #[test]
+    fn images_rejette_un_svg_non_svg_ou_trop_lourd() {
+        assert_eq!(check_svg_contents("<svg/>"), Ok(()));
+        assert_eq!(
+            check_svg_contents("<html></html>"),
+            Err("Format non supporté : contenu incompatible avec .svg".to_string())
+        );
+        let oversize = format!("<svg>{}", "a".repeat(MAX_IMAGE_BYTES as usize));
+        assert_eq!(check_svg_contents(&oversize), Err(TOO_LARGE_ERROR.to_string()));
+    }
+
+    #[test]
+    fn images_lit_au_plus_20_mo() {
+        let tmp = TempDir::new("read-cap");
+        let big = tmp.0.join("big.png");
+        fs::File::create(&big).unwrap().set_len(MAX_IMAGE_BYTES + 1).unwrap();
+        assert_eq!(read_capped(&big), Err(TOO_LARGE_ERROR.to_string()));
+        let small = tmp.0.join("small.png");
+        fs::write(&small, PNG).unwrap();
+        assert_eq!(read_capped(&small), Ok(PNG.to_vec()));
     }
 
     #[test]
