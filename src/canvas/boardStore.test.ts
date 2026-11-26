@@ -49,4 +49,29 @@ describe("boardStore", () => {
     getState().undo();
     expect(getState().nodes.map((n) => n.id)).toEqual(["n1", "n2"]);
   });
+
+  it("ajoute une carte image sélectionnée avec son asset", () => {
+    const asset = {
+      file: "a.png",
+      format: "png" as const,
+      originalName: "photo.png",
+      bytes: 10,
+      width: 960,
+      height: 640,
+      addedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const id = getState().addImageCard(asset, { x: 5, y: 6 }, { width: 480, height: 320 });
+
+    const card = getState().nodes[2];
+    expect(card).toMatchObject({
+      id,
+      type: "image",
+      position: { x: 5, y: 6 },
+      width: 480,
+      height: 320,
+      selected: true,
+      data: { title: "photo.png", status: "idle", image: asset },
+    });
+    expect(getState().nodes[0].selected).toBe(false);
+  });
 });

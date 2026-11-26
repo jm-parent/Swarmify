@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { NodeChangeset, XYPosition } from "@xyflow/react";
-import type { BoardNode, CardType } from "./types";
+import type { BoardNode, CardType, ImageAsset } from "./types";
 
 const HISTORY_LIMIT = 100;
 const PASTE_OFFSET = 40;
@@ -55,6 +55,7 @@ export interface BoardState {
   onNodesChange: (changes: NodeChangeset<BoardNode>) => void;
   checkpoint: () => void;
   addCard: (type: CardType, position: XYPosition) => string;
+  addImageCard: (asset: ImageAsset, position: XYPosition, size: { width: number; height: number }) => string;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   removeCard: (id: string) => void;
@@ -85,6 +86,24 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), { ...card, selected: true }],
     }));
     return card.id;
+  },
+
+  addImageCard: (asset, position, size) => {
+    get().checkpoint();
+    const id = crypto.randomUUID();
+    const card: BoardNode = {
+      id,
+      type: "image",
+      position,
+      width: size.width,
+      height: size.height,
+      selected: true,
+      data: { title: asset.originalName, status: "idle", image: asset },
+    };
+    set((s) => ({
+      nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), card],
+    }));
+    return id;
   },
 
   updateCard: (id, patch) =>
