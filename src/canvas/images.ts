@@ -144,8 +144,9 @@ export function sanitizeSvg(text: string): string {
   }
 }
 
-// Racine <svg> attendue après BOM, espaces, déclaration XML et commentaires (même règle que is_svg côté Rust).
-const SVG_ROOT = /^\uFEFF?\s*(<\?xml[\s\S]*?\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>/]/i;
+// Racine <svg> attendue après BOM, espaces, déclaration XML et commentaires (même règle que is_svg côté Rust, sensible à la casse).
+// Chaque commentaire ne peut se terminer qu'à son premier `-->` (jetons « tempered ») : aucun découpage ambigu, donc pas de retour arrière exponentiel.
+const SVG_ROOT = /^\uFEFF?\s*(<\?xml(?:(?!\?>)[\s\S])*\?>\s*)?(?:<!--(?:(?!-->)[\s\S])*-->\s*)*<svg[\s>/]/;
 
 // Un texte vide ou sans racine <svg> (ex. HTML renvoyé à la place d'un SVG) est refusé.
 export function assertSvgRoot(text: string): string {

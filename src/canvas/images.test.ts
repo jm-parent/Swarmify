@@ -86,6 +86,32 @@ describe("images", () => {
     expect(assertSvgRoot('\uFEFF<?xml version="1.0"?>\n<svg/>')).toBe('\uFEFF<?xml version="1.0"?>\n<svg/>');
   });
 
+  it("accepte les racines usuelles : déclaration XML seule, commentaire seul, BOM seul", () => {
+    expect(assertSvgRoot('<?xml version="1.0"?>\n<svg/>')).toBe('<?xml version="1.0"?>\n<svg/>');
+    expect(assertSvgRoot("<!-- c --><svg/>")).toBe("<!-- c --><svg/>");
+    expect(assertSvgRoot("\uFEFF<svg/>")).toBe("\uFEFF<svg/>");
+  });
+
+  it("refuse une racine en majuscules et un texte rempli de commentaires sans racine", () => {
+    expect(() => assertSvgRoot("<SVG/>")).toThrow("SVG invalide");
+    expect(() => assertSvgRoot("<!-- a -->".repeat(50) + "<html/>")).toThrow("SVG invalide");
+  });
+
+  // Avec l'ancienne regex, chaque commentaire pouvait être découpé de plusieurs façons : le temps doublait par commentaire.
+  it("échoue vite sur 2000 commentaires sans racine <svg", () => {
+    const text = "<!--x-->".repeat(2000);
+    let error: unknown;
+    const start = performance.now();
+    try {
+      assertSvgRoot(text);
+    } catch (caught) {
+      error = caught;
+    }
+    const elapsed = performance.now() - start;
+    expect(error).toEqual(new Error("SVG invalide"));
+    expect(elapsed).toBeLessThan(200);
+  });
+
   it("traduit en français l'erreur de lecture d'un SVG importé", async () => {
     await expect(importImageAsset("C:\\images\\a.svg")).rejects.toThrow("Lecture du SVG impossible : permission refusée");
   });
