@@ -22,6 +22,57 @@ describe("boardFile", () => {
     expect(restored).toEqual({ ...node, selected: false });
   });
 
+  it("restaure un groupe et le parentId de son membre", () => {
+    const group: BoardNode = {
+      id: "g1",
+      type: "group",
+      position: { x: 0, y: 0 },
+      width: 600,
+      height: 440,
+      data: { title: "Testers", status: "idle", group: { role: "testers", minSize: { width: 600, height: 440 } } },
+    };
+    const member: BoardNode = {
+      id: "a1",
+      type: "agent",
+      position: { x: 24, y: 24 },
+      width: 560,
+      height: 380,
+      parentId: "g1",
+      data: { title: "Agent", status: "idle", terminal: { shell: "powershell", preset: "copilot", cwd: "", sessionId: "s1" } },
+    };
+    const restored = parseBoard(serializeBoard([group, member]));
+    expect(restored).toEqual([
+      { ...group, selected: false },
+      { ...member, selected: false },
+    ]);
+  });
+
+  it("refuse un parentId qui ne pointe vers aucun groupe", () => {
+    const member = { ...node, id: "a1", type: "agent", parentId: "absent", data: { ...node.data, terminal: { sessionId: "s1" } } };
+    expect(() => parseBoard(JSON.stringify({ version: 1, nodes: [member] }))).toThrow("invalide");
+  });
+
+  it("refuse un groupe au rôle inconnu", () => {
+    const group = { id: "g1", type: "group", position: { x: 0, y: 0 }, width: 600, height: 440, data: { title: "G", status: "idle", group: { role: "boss", minSize: { width: 600, height: 440 } } } };
+    expect(() => parseBoard(JSON.stringify({ version: 1, nodes: [group] }))).toThrow("invalide");
+  });
+
+  it("refuse un parentId posé sur un groupe", () => {
+    const group = { id: "g2", type: "group", parentId: "g1", position: { x: 0, y: 0 }, width: 600, height: 440, data: { title: "G", status: "idle", group: { role: "general", minSize: { width: 600, height: 440 } } } };
+    expect(() => parseBoard(JSON.stringify({ version: 1, nodes: [group] }))).toThrow("invalide");
+  });
+
+  it("garde le format de la version 1 quand il n'y a pas de groupe", () => {
+    expect(serializeBoard([node])).not.toContain("parentId");
+  });
+
+  it("remet un groupe en tête quand le fichier le place après ses membres", () => {
+    const group = { id: "g1", type: "group", position: { x: 0, y: 0 }, width: 600, height: 440, data: { title: "G", status: "idle", group: { role: "general", minSize: { width: 600, height: 440 } } } };
+    const member = { id: "a1", type: "agent", parentId: "g1", position: { x: 24, y: 24 }, width: 560, height: 380, data: { title: "A", status: "idle", terminal: { sessionId: "s1" } } };
+    const [first] = parseBoard(JSON.stringify({ version: 1, nodes: [member, group] }));
+    expect(first.id).toBe("g1");
+  });
+
   it("refuse un fichier d'une autre version", () => {
     expect(() => parseBoard(JSON.stringify({ version: 2, nodes: [] }))).toThrow("version");
   });

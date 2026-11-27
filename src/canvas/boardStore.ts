@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { NodeChangeset, XYPosition } from "@xyflow/react";
-import type { BoardNode, CardType, ImageAsset } from "./types";
+import * as groupOps from "./groups/groupOps";
+import type { BoardNode, CardType, GroupRole, ImageAsset } from "./types";
 
 const HISTORY_LIMIT = 100;
 const PASTE_OFFSET = 40;
@@ -70,6 +71,15 @@ export interface BoardState {
   paste: () => string[];
   undo: () => void;
   redo: () => void;
+  // Actions de groupe (contrat : specs/002-agent-groups/contracts/group-api.md).
+  createGroup: (position: XYPosition) => string;
+  renameGroup: (id: string, name: string) => void;
+  setGroupRole: (id: string, role: GroupRole) => void;
+  addAgentToGroup: (agentId: string, groupId: string) => void;
+  removeAgentFromGroup: (agentId: string) => void;
+  deleteGroup: (id: string) => void;
+  resizeGroup: (id: string, width: number, height: number) => void;
+  settleMembership: (agentIds: string[]) => void;
 }
 
 export type BoardStore = StoreApi<BoardState>;
@@ -201,6 +211,54 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
         past: [...past, nodes],
         future: future.slice(1),
       });
+    },
+
+    // Le pur calcule d'abord : une erreur (nom vide, rôle inconnu) ne laisse aucun point d'annulation.
+    createGroup: (position) => {
+      const { nodes, id } = groupOps.createGroup(get().nodes, { position });
+      get().checkpoint();
+      set({ nodes });
+      return id;
+    },
+
+    renameGroup: (id, name) => {
+      const nodes = groupOps.renameGroup(get().nodes, id, name);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    setGroupRole: (id, role) => {
+      const nodes = groupOps.setGroupRole(get().nodes, id, role);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    addAgentToGroup: (agentId, groupId) => {
+      const nodes = groupOps.addAgentToGroup(get().nodes, agentId, groupId);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    removeAgentFromGroup: (agentId) => {
+      const nodes = groupOps.removeAgentFromGroup(get().nodes, agentId);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    deleteGroup: (id) => {
+      const nodes = groupOps.deleteGroup(get().nodes, id);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    // Pas de checkpoint : le point d'annulation est pris au début du geste (onResizeStart), voir contracts/group-api.md.
+    resizeGroup: (id, width, height) => {
+      set({ nodes: groupOps.resizeGroup(get().nodes, id, { width, height }) });
+    },
+
+    // Pas de checkpoint : le point est pris au début du glissement (onNodeDragStart).
+    settleMembership: (agentIds) => {
+      set({ nodes: groupOps.settleMembership(get().nodes, agentIds) });
     },
   }));
 }
