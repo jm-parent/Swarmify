@@ -18,6 +18,7 @@ interface CardFrameProps {
 export function CardFrame({ id, data, selected, headerAction, keepAspectRatio, children }: CardFrameProps) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const checkpoint = useBoardStore((s) => s.checkpoint);
+  const refitGroupOf = useBoardStore((s) => s.refitGroupOf);
 
   return (
     <div className={`card status-${data.status}${selected ? " selected" : ""}`}>
@@ -27,6 +28,7 @@ export function CardFrame({ id, data, selected, headerAction, keepAspectRatio, c
         minHeight={120}
         keepAspectRatio={keepAspectRatio}
         onResizeStart={checkpoint}
+        onResizeEnd={() => refitGroupOf(id)}
       />
       <div className="card-header">
         <span className="card-status" aria-label={data.status} />

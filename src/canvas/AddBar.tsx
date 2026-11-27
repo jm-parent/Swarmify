@@ -26,8 +26,10 @@ export function AddBar() {
   const addGroup = () => {
     const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     store.getState().createGroup({
-      x: center.x - DEFAULT_GROUP_SIZE.width / 2,
-      y: center.y - DEFAULT_GROUP_SIZE.height / 2,
+      position: {
+        x: center.x - DEFAULT_GROUP_SIZE.width / 2,
+        y: center.y - DEFAULT_GROUP_SIZE.height / 2,
+      },
     });
   };
 

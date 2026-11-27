@@ -50,6 +50,15 @@ function seedNodes(): BoardNode[] {
   return [note, kanban];
 }
 
+// Recalcule les cadres dont un membre vient de partir ou de changer de taille.
+function refitGroups(nodes: BoardNode[], groupIds: Set<string>): BoardNode[] {
+  let next = nodes;
+  for (const id of groupIds) {
+    if (next.some((n) => n.id === id && n.type === "group")) next = groupOps.fitGroup(next, id);
+  }
+  return next;
+}
+
 export interface BoardState {
   workspaceId: string;
   folder: string;
@@ -72,7 +81,7 @@ export interface BoardState {
   undo: () => void;
   redo: () => void;
   // Actions de groupe (contrat : specs/002-agent-groups/contracts/group-api.md).
-  createGroup: (position: XYPosition) => string;
+  createGroup: (options?: { name?: string; role?: GroupRole; position?: XYPosition }) => string;
   renameGroup: (id: string, name: string) => void;
   setGroupRole: (id: string, role: GroupRole) => void;
   addAgentToGroup: (agentId: string, groupId: string) => void;
@@ -80,6 +89,7 @@ export interface BoardState {
   deleteGroup: (id: string) => void;
   resizeGroup: (id: string, width: number, height: number) => void;
   settleMembership: (agentIds: string[]) => void;
+  refitGroupOf: (nodeId: string) => void;
 }
 
 export type BoardStore = StoreApi<BoardState>;
@@ -164,20 +174,29 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
       const { nodes } = get();
       if (!nodes.some((n) => n.selected)) return;
       get().checkpoint();
-      // Un cadre sélectionné libère ses membres sans les supprimer ; un membre sélectionné est supprimé par la sélection.
+      const selectedGroups = new Set(nodes.filter((n) => n.type === "group" && n.selected).map((n) => n.id));
+      // Un membre d'un cadre supprimé est libéré, jamais supprimé (FR-012), même s'il est sélectionné.
+      const released = new Set(
+        nodes.filter((n) => n.selected && n.parentId !== undefined && selectedGroups.has(n.parentId)).map((n) => n.id),
+      );
+      const doomed = new Set(nodes.filter((n) => n.selected && !released.has(n.id)).map((n) => n.id));
+      const parents = new Set(
+        nodes.filter((n) => doomed.has(n.id) && n.parentId !== undefined).map((n) => n.parentId as string),
+      );
       let next = nodes;
-      for (const group of nodes.filter((n) => n.type === "group" && n.selected)) {
-        next = groupOps.deleteGroup(next, group.id);
-      }
-      set({ nodes: next.filter((n) => !n.selected) });
+      for (const id of selectedGroups) next = groupOps.deleteGroup(next, id);
+      next = next.filter((n) => !doomed.has(n.id)).map((n) => (released.has(n.id) ? { ...n, selected: false } : n));
+      set({ nodes: refitGroups(next, parents) });
     },
 
     removeCard: (id) => {
       const target = get().nodes.find((n) => n.id === id);
       get().checkpoint();
-      set((s) => ({
-        nodes: target?.type === "group" ? groupOps.deleteGroup(s.nodes, id) : s.nodes.filter((n) => n.id !== id),
-      }));
+      set((s) => {
+        if (target?.type === "group") return { nodes: groupOps.deleteGroup(s.nodes, id) };
+        const parents = new Set(target?.parentId !== undefined ? [target.parentId] : []);
+        return { nodes: refitGroups(s.nodes.filter((n) => n.id !== id), parents) };
+      });
     },
 
     copySelected: () => {
@@ -232,8 +251,8 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
     },
 
     // Le pur calcule d'abord : une erreur (nom vide, rôle inconnu) ne laisse aucun point d'annulation.
-    createGroup: (position) => {
-      const { nodes, id } = groupOps.createGroup(get().nodes, { position });
+    createGroup: (options = {}) => {
+      const { nodes, id } = groupOps.createGroup(get().nodes, options);
       get().checkpoint();
       set({ nodes });
       return id;
@@ -277,6 +296,13 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
     // Pas de checkpoint : le point est pris au début du glissement (onNodeDragStart).
     settleMembership: (agentIds) => {
       set({ nodes: groupOps.settleMembership(get().nodes, agentIds) });
+    },
+
+    // Pas de checkpoint : le point d'annulation est déjà pris au début du geste (CardFrame, onResizeStart).
+    refitGroupOf: (nodeId) => {
+      const parent = get().nodes.find((n) => n.id === nodeId)?.parentId;
+      if (parent === undefined) return;
+      set({ nodes: refitGroups(get().nodes, new Set([parent])) });
     },
   }));
 }

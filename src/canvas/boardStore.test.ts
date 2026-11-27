@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createBoardStore } from "./boardStore";
-import { GroupError } from "./groups/groupOps";
+import { fitGroup, GroupError } from "./groups/groupOps";
+import type { BoardNode } from "./types";
 
 const store = createBoardStore("ws-test", "C:\\projet", []);
 const { getState, setState } = store;
@@ -268,7 +269,7 @@ describe("boardStore", () => {
   });
 
   it("annule une création de groupe en une seule étape", () => {
-    const id = getState().createGroup({ x: 0, y: 0 });
+    const id = getState().createGroup({ position: { x: 0, y: 0 } });
     expect(getState().nodes.some((n) => n.id === id)).toBe(true);
 
     getState().undo();
@@ -277,7 +278,7 @@ describe("boardStore", () => {
   });
 
   it("refuse un renommage vide sans créer de point d'annulation", () => {
-    const id = getState().createGroup({ x: 0, y: 0 });
+    const id = getState().createGroup({ position: { x: 0, y: 0 } });
     const pastBefore = getState().past.length;
 
     expect(() => getState().renameGroup(id, "   ")).toThrow(GroupError);
@@ -302,5 +303,55 @@ describe("boardStore", () => {
     expect(pasted?.position).toEqual({ x: 640, y: 440 });
     expect(getState().nodes.some((n) => n.type === "group" && n.id !== "g1")).toBe(false);
     expect(getState().clipboard.map((n) => n.type)).toEqual(["agent"]);
+  });
+
+  it("supprimer un cadre et ses agents sélectionnés garde les agents", () => {
+    setState({
+      nodes: [
+        { id: "g1", type: "group", position: { x: 0, y: 0 }, width: 600, height: 440, selected: true, data: { title: "G", status: "idle", group: { role: "general", minSize: { width: 600, height: 440 } } } },
+        { id: "a1", type: "agent", parentId: "g1", position: { x: 100, y: 100 }, width: 560, height: 380, selected: true, data: { title: "A", status: "running" } },
+      ],
+    });
+
+    getState().deleteSelected();
+
+    expect(getState().nodes.map((n) => n.id)).toEqual(["a1"]);
+    expect(getState().nodes[0].selected).toBe(false);
+    expect(getState().nodes[0].parentId).toBeUndefined();
+  });
+
+  it("supprimer un agent membre réduit le cadre à sa boîte", () => {
+    const base: BoardNode[] = [
+      { id: "g1", type: "group", position: { x: 0, y: 0 }, width: 600, height: 440, data: { title: "G", status: "idle", group: { role: "general", minSize: { width: 600, height: 440 } } } },
+      { id: "a1", type: "agent", parentId: "g1", position: { x: 100, y: 100 }, width: 560, height: 380, data: { title: "A", status: "idle" } },
+      { id: "a2", type: "agent", parentId: "g1", position: { x: 900, y: 100 }, width: 560, height: 380, selected: true, data: { title: "B", status: "idle" } },
+    ];
+    setState({ nodes: fitGroup(base, "g1") });
+
+    getState().deleteSelected();
+
+    expect(getState().nodes.find((n) => n.id === "g1")?.width).toBe(608);
+  });
+
+  it("redimensionner un agent membre fait grandir son cadre", () => {
+    const base: BoardNode[] = [
+      { id: "g1", type: "group", position: { x: 0, y: 0 }, width: 600, height: 440, data: { title: "G", status: "idle", group: { role: "general", minSize: { width: 600, height: 440 } } } },
+      { id: "a1", type: "agent", parentId: "g1", position: { x: 100, y: 100 }, width: 560, height: 380, data: { title: "A", status: "idle" } },
+    ];
+    const fitted = fitGroup(base, "g1");
+    setState({ nodes: fitted.map((n) => (n.id === "a1" ? { ...n, width: 900 } : n)) });
+
+    getState().refitGroupOf("a1");
+
+    expect(getState().nodes.find((n) => n.id === "g1")?.width).toBe(948);
+  });
+
+  it("crée un groupe avec son nom et son rôle en une seule étape", () => {
+    const id = getState().createGroup({ name: "Backend", role: "backend", position: { x: 0, y: 0 } });
+
+    const created = getState().nodes.find((n) => n.id === id);
+    expect(created?.data.title).toBe("Backend");
+    expect(created?.data.group?.role).toBe("backend");
+    expect(getState().past).toHaveLength(1);
   });
 });

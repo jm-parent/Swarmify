@@ -133,7 +133,10 @@ export function addAgentToGroup(nodes: BoardNode[], agentId: string, groupId: st
   if (agent.parentId === groupId) return nodes;
   const absolute = absolutePosition(nodes, agent);
   const relative = { x: absolute.x - group.position.x, y: absolute.y - group.position.y };
-  return fitGroup(groupsFirst(nodes.map((n) => (n.id === agentId ? { ...n, parentId: groupId, position: relative } : n))), groupId);
+  const moved = groupsFirst(nodes.map((n) => (n.id === agentId ? { ...n, parentId: groupId, position: relative } : n)));
+  const fitted = fitGroup(moved, groupId);
+  // L'ancien cadre se réajuste aussi : il ne garde pas la place de l'agent parti.
+  return agent.parentId ? fitGroup(fitted, agent.parentId) : fitted;
 }
 
 export function removeAgentFromGroup(nodes: BoardNode[], agentId: string): BoardNode[] {
@@ -214,6 +217,9 @@ export function minimumGroupSize(nodes: BoardNode[], groupId: string): { width: 
 
 // Le redimensionnement à la main ne descend pas sous la boîte des membres. La taille obtenue devient la taille minimale.
 export function resizeGroup(nodes: BoardNode[], groupId: string, size: { width: number; height: number }): BoardNode[] {
+  const current = findGroup(nodes, groupId);
+  // Un clic sans mouvement ne fixe pas de taille manuelle.
+  if (size.width === current.width && size.height === current.height) return nodes;
   const min = minimumGroupSize(nodes, groupId);
   const minSize = { width: Math.max(size.width, min.width), height: Math.max(size.height, min.height) };
   const withSize = nodes.map((n) =>

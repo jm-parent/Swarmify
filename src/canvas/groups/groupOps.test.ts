@@ -5,6 +5,7 @@ import {
   countMembers,
   createGroup,
   deleteGroup,
+  fitGroup,
   GroupError,
   groupOf,
   removeAgentFromGroup,
@@ -203,6 +204,25 @@ describe("groupOps", () => {
     expect(frame?.position).toEqual({ x: 376, y: 376 });
     expect(frame!.position.x + member!.position.x).toBe(400);
     expect(frame!.position.y + member!.position.y).toBe(400);
+  });
+
+  it("un redimensionnement sans changement ne fixe pas la taille minimale", () => {
+    const fitted = fitGroup([group("gA", { x: 0, y: 0 }), agent("a1", { x: 100, y: 100 }, "idle", "gA")], "gA");
+    const current = fitted.find((n) => n.id === "gA");
+    const unchanged = resizeGroup(fitted, "gA", { width: current!.width!, height: current!.height! });
+    expect(unchanged.find((n) => n.id === "gA")?.data.group?.minSize).toEqual({ width: 600, height: 440 });
+  });
+
+  it("transférer un agent recalcule aussi l'ancien cadre", () => {
+    const nodes = [
+      group("gA", { x: 0, y: 0 }),
+      group("gB", { x: 2000, y: 0 }),
+      agent("a1", { x: 100, y: 100 }, "idle", "gA"),
+      agent("a2", { x: 900, y: 100 }),
+    ];
+    const withTwo = addAgentToGroup(nodes, "a2", "gA");
+    const moved = addAgentToGroup(withTwo, "a2", "gB");
+    expect(moved.find((n) => n.id === "gA")?.width).toBe(608);
   });
 
   it("retire un agent avec removeAgentFromGroup et garde sa position absolue", () => {

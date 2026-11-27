@@ -198,7 +198,7 @@ function BoardCanvas() {
     return [
       { id: "agent", label: "Agent", icon: Bot, onSelect: () => store.getState().addCard("agent", at) },
       { id: "note", label: "Note", icon: StickyNote, onSelect: () => store.getState().addCard("note", at) },
-      { id: "group", label: "Groupe", icon: Users, onSelect: () => store.getState().createGroup(at) },
+      { id: "group", label: "Groupe", icon: Users, onSelect: () => store.getState().createGroup({ position: at }) },
       {
         id: "image",
         label: "Image",

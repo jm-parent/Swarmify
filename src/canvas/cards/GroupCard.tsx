@@ -30,6 +30,7 @@ export function GroupCard({ id, data, selected }: NodeProps<BoardNode>) {
   const checkpoint = useBoardStore((s) => s.checkpoint);
   const renameGroup = useBoardStore((s) => s.renameGroup);
   const setGroupRole = useBoardStore((s) => s.setGroupRole);
+  const resizeGroup = useBoardStore((s) => s.resizeGroup);
   // Le cadre peut disparaître pendant qu'on lit le compteur (suppression en cours) : on ne lève pas d'erreur.
   const count = useBoardStore(
     useShallow((s) => (s.nodes.some((n) => n.id === id) ? countMembers(s.nodes, id) : NO_MEMBERS)),
@@ -38,9 +39,9 @@ export function GroupCard({ id, data, selected }: NodeProps<BoardNode>) {
   const minSize = useBoardStore(
     useShallow((s) => (s.nodes.some((n) => n.id === id) ? minimumGroupSize(s.nodes, id) : NO_SIZE)),
   );
-  const resizeGroup = useBoardStore((s) => s.resizeGroup);
   const [draft, setDraft] = useState(data.title);
   const cancelled = useRef(false);
+  const resizing = useRef(false);
 
   useEffect(() => setDraft(data.title), [data.title]);
 
@@ -98,8 +99,16 @@ export function GroupCard({ id, data, selected }: NodeProps<BoardNode>) {
           position="bottom-right"
           minWidth={minSize.width}
           minHeight={minSize.height}
-          onResizeStart={checkpoint}
-          onResizeEnd={(_event, params) => resizeGroup(id, params.width, params.height)}
+          onResize={() => {
+            // Premier mouvement seulement : un clic sans mouvement n'ajoute ni point d'annulation ni taille manuelle.
+            if (resizing.current) return;
+            checkpoint();
+            resizing.current = true;
+          }}
+          onResizeEnd={(_event, params) => {
+            if (resizing.current) resizeGroup(id, params.width, params.height);
+            resizing.current = false;
+          }}
         />
       )}
     </div>
