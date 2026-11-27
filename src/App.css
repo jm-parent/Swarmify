@@ -114,8 +114,47 @@ body,
   list-style: none;
 }
 
+.workspace-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .workspace-row.active .workspace-item {
   color: var(--accent);
+}
+
+.workspace-row .workspace-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-rename-btn {
+  flex: none;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--r-card);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.workspace-rename-btn:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+.workspace-error {
+  box-sizing: border-box;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: var(--r-card);
+  background: var(--bg-surface);
+  color: var(--danger);
+  font-size: 13px;
 }
 
 .workspace-item,

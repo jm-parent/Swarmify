@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 
 export interface Workspace {
   id: string;
@@ -27,4 +28,10 @@ export function markOpened(id: string): Promise<void> {
 
 export function deleteWorkspace(id: string): Promise<void> {
   return invoke("delete_workspace", { id });
+}
+
+// Annuler le dialogue renvoie null. Une erreur du dialogue remonte à l'appelant.
+export async function pickWorkspaceFolder(): Promise<string | null> {
+  const folder = await open({ directory: true, multiple: false });
+  return typeof folder === "string" ? folder : null;
 }

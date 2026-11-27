@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ConfirmDialog } from "../canvas/ConfirmDialog";
-import type { Workspace } from "./workspaceApi";
-import { pickWorkspaceFolder } from "./HomeScreen";
+import { errorMessage } from "../canvas/images";
+import { pickWorkspaceFolder, type Workspace } from "./workspaceApi";
 import { useWorkspaceStore } from "./workspaceStore";
 
 function plural(count: number, word: string): string {
@@ -12,6 +12,7 @@ export function WorkspaceSwitcher() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeId = useWorkspaceStore((s) => s.activeId);
   const open = useWorkspaceStore((s) => s.open);
+  const error = useWorkspaceStore((s) => s.error);
   const active = workspaces.find((w) => w.id === activeId);
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,8 +32,19 @@ export function WorkspaceSwitcher() {
 
   const newWorkspace = async () => {
     setMenuOpen(false);
-    const folder = await pickWorkspaceFolder();
-    if (folder) await useWorkspaceStore.getState().create(folder);
+    useWorkspaceStore.setState({ error: null });
+    try {
+      const folder = await pickWorkspaceFolder();
+      if (folder) await useWorkspaceStore.getState().create(folder);
+    } catch (err) {
+      useWorkspaceStore.setState({ error: errorMessage(err) });
+    }
+  };
+
+  const activate = (id: string) => {
+    setMenuOpen(false);
+    useWorkspaceStore.setState({ error: null });
+    void useWorkspaceStore.getState().activate(id);
   };
 
   const startRename = (ws: Workspace) => {
@@ -43,7 +55,9 @@ export function WorkspaceSwitcher() {
   const commitRename = () => {
     const id = renamingId;
     setRenamingId(null);
-    if (id) void useWorkspaceStore.getState().rename(id, renameValue);
+    if (!id) return;
+    useWorkspaceStore.setState({ error: null });
+    void useWorkspaceStore.getState().rename(id, renameValue);
   };
 
   const onRenameKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -67,6 +81,7 @@ export function WorkspaceSwitcher() {
       >
         {active?.name ?? "Workspace"} <span aria-hidden="true">▾</span>
       </button>
+      {error && <p className="workspace-error" role="alert">{error}</p>}
       {menuOpen && (
         <div className="workspace-menu" role="menu">
           <ul className="workspace-list">
@@ -83,19 +98,26 @@ export function WorkspaceSwitcher() {
                     onBlur={() => setRenamingId(null)}
                   />
                 ) : (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="workspace-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      void useWorkspaceStore.getState().activate(ws.id);
-                    }}
-                    onDoubleClick={() => startRename(ws)}
-                  >
-                    <span className="workspace-name">{ws.name}</span>
-                    {!ws.folderExists && <span className="workspace-missing">Dossier introuvable</span>}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="workspace-item"
+                      onClick={() => activate(ws.id)}
+                    >
+                      <span className="workspace-name">{ws.name}</span>
+                      {!ws.folderExists && <span className="workspace-missing">Dossier introuvable</span>}
+                    </button>
+                    <button
+                      type="button"
+                      className="workspace-rename-btn"
+                      aria-label="Renommer"
+                      title="Renommer"
+                      onClick={() => startRename(ws)}
+                    >
+                      <span aria-hidden="true">✎</span>
+                    </button>
+                  </>
                 )}
               </li>
             ))}
@@ -125,6 +147,7 @@ export function WorkspaceSwitcher() {
           confirmLabel="Supprimer le workspace"
           onConfirm={() => {
             setConfirmDelete(false);
+            useWorkspaceStore.setState({ error: null });
             void useWorkspaceStore.getState().remove(active.id);
           }}
           onCancel={() => setConfirmDelete(false)}
