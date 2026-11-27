@@ -6,6 +6,7 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 
 | Étape | Outil | Résultat |
 |---|---|---|
+| 0. Programme, si la feature est découpée en plusieurs features (voir « Programme ») | discussion principale | `docs/programs/<nom>.md` : découpage, dépendances, statut |
 | 1. Brainstorming (en conversation, sans skill Superpowers brainstorming) | SpecKit | idées et alternatives validées |
 | 2. `/speckit-specify` | SpecKit | `specs/<id>/spec.md` |
 | 3. `/speckit-clarify` | SpecKit | questions ouvertes résolues |
@@ -17,6 +18,16 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 | 7b. Passe `impeccable` (si la feature modifie l'interface) | impeccable | critique et polissage de l'UI, avant la revue |
 | 8. Revue de code | Superpowers | liste de points par sévérité |
 | 9. Finition de branche | Superpowers | PR ouverte ou branche fusionnée |
+
+## Programme (grosse feature en plusieurs sessions)
+
+Une grosse feature découpée en plusieurs features se pilote depuis la discussion principale, qui ne code pas.
+
+- Le programme est un document committé sur `main` : `docs/programs/<nom>.md`. Il contient le découpage en features numérotées, les dépendances (`depends_on`), les contrats partagés, les zones de code touchées par feature (pour repérer les chevauchements), et le statut.
+- La discussion principale alloue les numéros de feature (`specs/<id>/`) avant de lancer les sessions.
+- Chaque feature suit la boucle ci-dessus dans sa propre session. Une spec validée (sortie de `/speckit-analyze`) est mergée sur `main` par PR. Les sessions dépendantes repartent de `main`, ou rebasent dessus, pour lire la spec amont.
+- Une feature démarre son implémentation quand toutes ses dépendances sont mergées. Sa phase spec peut démarrer dès que le contrat amont est mergé.
+- Chaque session remonte son statut à la discussion principale. Celle-ci propose la feature suivante prête, et l'utilisateur valide chaque lancement de session.
 
 ## Règles
 
@@ -33,3 +44,4 @@ SpecKit cadre le quoi (idée, spec, plan, tâches). Superpowers exécute le comm
 - Moins de 30 min et moins de 3 fichiers : prompt direct, sans cadre.
 - 30 min à 2 h sur une préoccupation : Superpowers seul (TDD, finition).
 - Plus de 2 h ou multi-composants : cadre complet.
+- Grosse feature à découper en plusieurs features : programme d'abord, puis cadre complet par feature.
