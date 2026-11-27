@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { XYPosition } from "@xyflow/react";
-import { useBoardStore } from "./boardStore";
+import type { BoardStore } from "./boardStore";
 import type { ImageAsset, ImageFormat } from "./types";
 
 export const MAX_CARD_WIDTH = 480;
@@ -29,15 +29,19 @@ export interface ImportedImage {
   size: { width: number; height: number };
 }
 
-// Une seule résolution de images_dir par session ; un échec n'est pas gardé, il sera réessayé.
-let imagesDir: Promise<string> | undefined;
+// Une résolution de images_dir par workspace ; un échec retire l'entrée, il sera réessayé.
+const imagesDirs = new Map<string, Promise<string>>();
 
-function imagesDirPath(): Promise<string> {
-  imagesDir ??= invoke<string>("images_dir").catch((err: unknown) => {
-    imagesDir = undefined;
-    throw err;
-  });
-  return imagesDir;
+function imagesDirPath(workspaceId: string): Promise<string> {
+  let dir = imagesDirs.get(workspaceId);
+  if (!dir) {
+    dir = invoke<string>("images_dir", { workspaceId }).catch((err: unknown) => {
+      imagesDirs.delete(workspaceId);
+      throw err;
+    });
+    imagesDirs.set(workspaceId, dir);
+  }
+  return dir;
 }
 
 // Même forme que validate_file_name côté Rust : `<uuid>.<ext>`, JPEG stocké en `.jpg`.
@@ -65,18 +69,18 @@ export function imagesFolderFor(path: string): string {
 export const IMAGE_DIALOG_FILTERS = [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }];
 
 // Le nom vient du store SQLite (frontière de confiance) : il ne doit jamais sortir de images/.
-export async function imageSrc(file: string): Promise<string> {
+export async function imageSrc(workspaceId: string, file: string): Promise<string> {
   if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
-  return convertFileSrc(joinImagePath(await imagesDirPath(), file));
+  return convertFileSrc(joinImagePath(await imagesDirPath(workspaceId), file));
 }
 
 // Copie une image déjà stockée dans images/ : import_image prend ce fichier comme source et crée un nouveau nom.
 // Renvoie l'asset de la copie (originalName et addedAt y sont ceux de la copie : l'appelant garde ceux de l'original).
-export async function duplicateImageAsset(file: string): Promise<ImageAsset> {
+export async function duplicateImageAsset(workspaceId: string, file: string): Promise<ImageAsset> {
   if (!isImageFileName(file)) throw new Error(`Nom de fichier image invalide : ${file}`);
-  const sourcePath = joinImagePath(await imagesDirPath(), file);
-  const imported = await invoke<ImageImport>("import_image", { sourcePath });
-  const { asset } = await describeImport(imported, file);
+  const sourcePath = joinImagePath(await imagesDirPath(workspaceId), file);
+  const imported = await invoke<ImageImport>("import_image", { workspaceId, sourcePath });
+  const { asset } = await describeImport(workspaceId, imported, file);
   return asset;
 }
 
@@ -98,15 +102,19 @@ export function measureImage(src: string): Promise<{ width: number; height: numb
 }
 
 // Copie l'image dans images/ puis mesure la copie. Ne crée pas de carte.
-export async function importImageAsset(path: string): Promise<ImportedImage> {
-  const imported = await invoke<ImageImport>("import_image", { sourcePath: path });
-  return describeImport(imported, basename(path));
+export async function importImageAsset(workspaceId: string, path: string): Promise<ImportedImage> {
+  const imported = await invoke<ImageImport>("import_image", { workspaceId, sourcePath: path });
+  return describeImport(workspaceId, imported, basename(path));
 }
 
 // Mesure une copie déjà stockée dans images/ et construit son asset.
 // Un SVG est assaini avant la mesure (R9) : la copie stockée est réécrite avec sa version propre.
-export async function describeImport(imported: ImageImport, originalName: string): Promise<ImportedImage> {
-  if (imported.format === "svg") await sanitizeStoredSvg(imported);
+export async function describeImport(
+  workspaceId: string,
+  imported: ImageImport,
+  originalName: string,
+): Promise<ImportedImage> {
+  if (imported.format === "svg") await sanitizeStoredSvg(workspaceId, imported);
   const measured = await measureImage(convertFileSrc(imported.path));
   // Un SVG sans dimensions intrinsèques mesure 0 × 0 : on retient la taille par défaut.
   const natural = measured.width > 0 && measured.height > 0 ? measured : DEFAULT_SVG_SIZE;
@@ -126,13 +134,18 @@ export async function describeImport(imported: ImageImport, originalName: string
 
 // Importe les fichiers l'un après l'autre : un fichier en erreur n'empêche pas les autres.
 // Contrat de l'appelant : une position par chemin. Vérifié avant tout import, pour ne pas créer de carte sans position.
-export async function importImageFiles(paths: string[], positions: XYPosition[]): Promise<string[]> {
+export async function importImageFiles(
+  store: BoardStore,
+  paths: string[],
+  positions: XYPosition[],
+): Promise<string[]> {
   if (positions.length < paths.length) throw new Error("positions manquantes");
+  const { workspaceId } = store.getState();
   const errors: string[] = [];
   for (const [index, path] of paths.entries()) {
     try {
-      const { asset, size } = await importImageAsset(path);
-      useBoardStore.getState().addImageCard(asset, positions[index], size);
+      const { asset, size } = await importImageAsset(workspaceId, path);
+      store.getState().addImageCard(asset, positions[index], size);
     } catch (err) {
       errors.push(`${basename(path)} : ${errorMessage(err)}`);
     }
@@ -184,7 +197,7 @@ export function assertSvgRoot(text: string): string {
   return text;
 }
 
-async function sanitizeStoredSvg(imported: ImageImport): Promise<void> {
+async function sanitizeStoredSvg(workspaceId: string, imported: ImageImport): Promise<void> {
   let raw: string;
   try {
     raw = await invoke<string>("read_text_file", { path: imported.path });
@@ -192,5 +205,5 @@ async function sanitizeStoredSvg(imported: ImageImport): Promise<void> {
     throw new Error(`Lecture du SVG impossible : ${error instanceof Error ? error.message : String(error)}`);
   }
   const clean = assertSvgRoot(sanitizeSvg(raw));
-  await invoke("save_sanitized_svg", { file: imported.file, contents: clean });
+  await invoke("save_sanitized_svg", { workspaceId, file: imported.file, contents: clean });
 }

@@ -28,17 +28,18 @@ function toBase64(bytes: Uint8Array): string {
 
 // Renvoie null si le presse-papiers ne contient pas d'image (le plugin rejette alors readImage).
 // Une image présente mais impossible à importer lève une erreur.
-export async function importClipboardImage(): Promise<ImportedImage | null> {
+export async function importClipboardImage(workspaceId: string): Promise<ImportedImage | null> {
   const image = await readImage().catch(() => null);
   if (!image) return null;
   try {
     const { width, height } = await image.size();
     const png = await encodePng(await image.rgba(), width, height);
     const imported = await invoke<ImageImport>("save_image_bytes", {
+      workspaceId,
       format: "png",
       dataBase64: toBase64(png),
     });
-    return await describeImport(imported, "Presse-papiers.png");
+    return await describeImport(workspaceId, imported, "Presse-papiers.png");
   } finally {
     await image.close().catch(() => {});
   }
