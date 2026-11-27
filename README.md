@@ -13,6 +13,7 @@ Chaque agent tourne dans une carte terminal réelle (PTY). Les CLI sont héberg�
   - Kanban / Checklist
   - Image
 - **Supervision** : bandeau qui indique les agents actifs, en arrière-plan ou en attente, avec centrage de la caméra au clic.
+- **Groupes d'agents** : un cadre nommé contient des agents et les déplace avec lui. Il affiche le compteur `N · M actifs` et un rôle à couleur. Création depuis le menu radial ou la barre d'ajout.
 - **Sauvegarde automatique** du board, restauré au lancement.
 - **Raccourcis Windows** : Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+V / Ctrl+F / Suppr / Échap.
 
@@ -71,6 +72,8 @@ docs/superpowers/    Spécifications et plans de travail
 ## Données
 
 Le board est sauvegardé localement. L'app est pensée pour un seul utilisateur, sans serveur.
+
+Les groupes d'agents sont stockés dans le JSON du board. Une version de Swarmify antérieure à cette fonctionnalité refuse un fichier qui contient un groupe.
 
 ## Limites connues
 
