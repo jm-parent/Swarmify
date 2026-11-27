@@ -92,6 +92,19 @@ describe("workspaceStore", () => {
     expect(getState().activeId).toBe(id);
   });
 
+  it("activate dont le chargement du board échoue signale l'erreur sans ouvrir le workspace", async () => {
+    vi.mocked(loadWorkspaceNodes).mockRejectedValue(new Error("Chargement du board impossible : JSON invalide"));
+    setState({ workspaces: [ws({ id: "a" }), ws({ id: "b" })], activeId: "b" });
+
+    await getState().activate("a");
+
+    expect(getState().error).toBe("Chargement du board impossible : JSON invalide");
+    expect(getState().open).toEqual({});
+    expect(getState().activeId).toBe("b");
+    expect(attachAutosave).not.toHaveBeenCalled();
+    expect(markOpened).not.toHaveBeenCalled();
+  });
+
   it("create refuse un nom vide sans créer le workspace", async () => {
     await getState().create("C:\\projet", "   ");
 

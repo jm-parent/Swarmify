@@ -120,12 +120,15 @@ describe("persistence", () => {
     expect(invoke).toHaveBeenCalledWith("purge_unused_images", { workspaceId: "ws-1", referenced: [IMAGE_FILE] });
   });
 
-  it("renvoie undefined quand rien n'est sauvegardé ou que le chargement échoue", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("renvoie undefined quand rien n'est sauvegardé", async () => {
     expect(await loadWorkspaceNodes("ws-1", "C:\\projet")).toBeUndefined();
+  });
 
+  it("lève une erreur quand le chargement échoue ou que le board ne se lit pas", async () => {
     vi.mocked(invoke).mockRejectedValueOnce(new Error("base indisponible"));
-    expect(await loadWorkspaceNodes("ws-1", "C:\\projet")).toBeUndefined();
-    expect(consoleError).toHaveBeenCalled();
+    await expect(loadWorkspaceNodes("ws-1", "C:\\projet")).rejects.toThrow("Chargement du board impossible");
+
+    vi.mocked(invoke).mockResolvedValueOnce("pas du json");
+    await expect(loadWorkspaceNodes("ws-1", "C:\\projet")).rejects.toThrow("Chargement du board impossible");
   });
 });

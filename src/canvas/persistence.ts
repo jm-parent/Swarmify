@@ -70,19 +70,19 @@ export function attachAutosave(store: BoardStore): () => void {
   };
 }
 
-// Board sauvegardé d'un workspace, prêt à être donné au store. undefined si rien n'est sauvegardé ou en cas d'erreur.
+// Board sauvegardé d'un workspace, prêt à être donné au store. undefined si rien n'est sauvegardé ; lève une erreur si le board existe mais ne se lit pas.
 export async function loadWorkspaceNodes(workspaceId: string, folder: string): Promise<BoardNode[] | undefined> {
+  let nodes: BoardNode[];
   try {
     const saved = await invoke<string | null>("load_board", { workspaceId });
     if (!saved) return undefined;
-    const nodes = withFolder(parseBoard(saved), folder);
-    // Sans attente : un appel IPC bloqué ne retarde pas le chargement.
-    purgeUnusedImages(workspaceId, nodes);
-    return nodes;
+    nodes = withFolder(parseBoard(saved), folder);
   } catch (err) {
-    console.error("Chargement du board impossible, board par défaut affiché :", err);
-    return undefined;
+    throw new Error(`Chargement du board impossible : ${errorMessage(err)}`);
   }
+  // Sans attente : un appel IPC bloqué ne retarde pas le chargement.
+  purgeUnusedImages(workspaceId, nodes);
+  return nodes;
 }
 
 export async function exportBoard(store: BoardStore): Promise<void> {

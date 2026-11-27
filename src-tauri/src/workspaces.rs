@@ -1,5 +1,4 @@
 use std::fs;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -176,14 +175,17 @@ pub fn create_workspace(
         Vec::new()
     };
 
-    if let Err(e) = persistence::create_with_legacy(&conn, &ws) {
-        if adopting {
-            remove_workspace_dir(&app, &id);
+    let adopted = match persistence::create_with_legacy(&conn, &ws) {
+        Ok(adopted) => adopted,
+        Err(e) => {
+            if adopting {
+                remove_workspace_dir(&app, &id);
+            }
+            return Err(e);
         }
-        return Err(e);
-    }
+    };
 
-    if adopting {
+    if adopted {
         let legacy: Vec<PathBuf> = copied
             .iter()
             .filter_map(|path| path.file_name())
@@ -212,15 +214,14 @@ pub fn mark_opened(db: State<Db>, id: String) -> Result<(), String> {
 #[tauri::command]
 pub fn delete_workspace(app: AppHandle, db: State<Db>, id: String) -> Result<(), String> {
     valid_id(&id)?;
+    let dir = workspace_dir(&app, &id)?;
     {
         let conn = db.0.lock().map_err(|e| e.to_string())?;
         delete(&conn, &id)?;
     }
-    match fs::remove_dir_all(workspace_dir(&app, &id)?) {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(e.to_string()),
-    }
+    // Les lignes sont déjà supprimées : un dossier resté sur le disque est sans effet, son échec n'est pas remonté.
+    let _ = fs::remove_dir_all(dir);
+    Ok(())
 }
 
 #[cfg(test)]
