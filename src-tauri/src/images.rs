@@ -12,6 +12,8 @@ use base64::Engine as _;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
+use crate::workspaces;
+
 pub const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024;
 const TOO_LARGE_ERROR: &str = "Image trop lourde : 20 Mo maximum";
 const COPY_ERROR: &str = "Copie impossible : espace disque ou dossier inaccessible";
@@ -178,15 +180,38 @@ fn store_image(dir: &Path, format: ImageFormat, bytes: &[u8]) -> Result<ImageImp
     })
 }
 
-fn ensure_dir(app_data: &Path) -> Result<PathBuf, String> {
-    let dir = app_data.join("images");
+pub(crate) fn app_images_dir(app: &AppHandle, workspace_id: &str) -> Result<PathBuf, String> {
+    workspaces::valid_id(workspace_id)?;
+    let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let dir = root.join("workspaces").join(workspace_id).join("images");
     fs::create_dir_all(&dir).map_err(|e| format!("Dossier images inaccessible : {e}"))?;
     Ok(dir)
 }
 
-fn app_images_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    ensure_dir(&root)
+// Copies every file of the legacy `app_data/images` folder into `dest`; returns the destination paths.
+pub fn copy_legacy_images(app_data: &Path, dest: &Path) -> Result<Vec<PathBuf>, String> {
+    let legacy = app_data.join("images");
+    if !legacy.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut copied = Vec::new();
+    for entry in fs::read_dir(&legacy).map_err(|_| COPY_ERROR.to_string())? {
+        let entry = entry.map_err(|_| COPY_ERROR.to_string())?;
+        if !entry.file_type().is_ok_and(|t| t.is_file()) {
+            continue;
+        }
+        let target = dest.join(entry.file_name());
+        fs::copy(entry.path(), &target).map_err(|_| COPY_ERROR.to_string())?;
+        copied.push(target);
+    }
+    Ok(copied)
+}
+
+// Best-effort cleanup: errors are ignored.
+pub fn remove_files(paths: &[PathBuf]) {
+    for path in paths {
+        let _ = fs::remove_file(path);
+    }
 }
 
 // Deletes files of `dir` whose name is valid and absent from `referenced`; returns how many were removed.
@@ -208,8 +233,8 @@ pub fn purge_unused(dir: &Path, referenced: &[String]) -> Result<u32, String> {
 }
 
 #[tauri::command]
-pub fn images_dir(app: AppHandle) -> Result<PathBuf, String> {
-    app_images_dir(&app)
+pub fn images_dir(app: AppHandle, workspace_id: String) -> Result<PathBuf, String> {
+    app_images_dir(&app, &workspace_id)
 }
 
 // Reads at most MAX_IMAGE_BYTES + 1 bytes, so a file growing after any metadata check cannot exhaust memory.
@@ -245,8 +270,8 @@ fn check_svg_contents(contents: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn import_image(app: AppHandle, source_path: PathBuf) -> Result<ImageImport, String> {
-    let dir = app_images_dir(&app)?;
+pub fn import_image(app: AppHandle, workspace_id: String, source_path: PathBuf) -> Result<ImageImport, String> {
+    let dir = app_images_dir(&app, &workspace_id)?;
     let ext = source_path.extension().and_then(|e| e.to_str()).unwrap_or("");
     format_from_extension(ext)?;
     let bytes = read_capped(&source_path)?;
@@ -255,8 +280,13 @@ pub fn import_image(app: AppHandle, source_path: PathBuf) -> Result<ImageImport,
 }
 
 #[tauri::command]
-pub fn save_image_bytes(app: AppHandle, format: String, data_base64: String) -> Result<ImageImport, String> {
-    let dir = app_images_dir(&app)?;
+pub fn save_image_bytes(
+    app: AppHandle,
+    workspace_id: String,
+    format: String,
+    data_base64: String,
+) -> Result<ImageImport, String> {
+    let dir = app_images_dir(&app, &workspace_id)?;
     format_from_extension(&format)?;
     let bytes = decode_base64_capped(&data_base64)?;
     let kind = check_import(&format, &bytes)?;
@@ -264,13 +294,18 @@ pub fn save_image_bytes(app: AppHandle, format: String, data_base64: String) -> 
 }
 
 #[tauri::command]
-pub fn save_sanitized_svg(app: AppHandle, file: String, contents: String) -> Result<(), String> {
+pub fn save_sanitized_svg(
+    app: AppHandle,
+    workspace_id: String,
+    file: String,
+    contents: String,
+) -> Result<(), String> {
     validate_file_name(&file)?;
     if !file.ends_with(".svg") {
         return Err(format!("Fichier SVG attendu : {file}"));
     }
     check_svg_contents(&contents)?;
-    let path = app_images_dir(&app)?.join(&file);
+    let path = app_images_dir(&app, &workspace_id)?.join(&file);
     if !path.is_file() {
         return Err(format!("Image introuvable : {file}"));
     }
@@ -278,9 +313,14 @@ pub fn save_sanitized_svg(app: AppHandle, file: String, contents: String) -> Res
 }
 
 #[tauri::command]
-pub fn copy_image_file(app: AppHandle, file: String, dest_path: PathBuf) -> Result<(), String> {
+pub fn copy_image_file(
+    app: AppHandle,
+    workspace_id: String,
+    file: String,
+    dest_path: PathBuf,
+) -> Result<(), String> {
     validate_file_name(&file)?;
-    let src = app_images_dir(&app)?.join(&file);
+    let src = app_images_dir(&app, &workspace_id)?.join(&file);
     if let Some(parent) = dest_path.parent() {
         fs::create_dir_all(parent).map_err(|_| COPY_ERROR.to_string())?;
     }
@@ -288,8 +328,8 @@ pub fn copy_image_file(app: AppHandle, file: String, dest_path: PathBuf) -> Resu
 }
 
 #[tauri::command]
-pub fn purge_unused_images(app: AppHandle, referenced: Vec<String>) -> Result<u32, String> {
-    let dir = app_images_dir(&app)?;
+pub fn purge_unused_images(app: AppHandle, workspace_id: String, referenced: Vec<String>) -> Result<u32, String> {
+    let dir = app_images_dir(&app, &workspace_id)?;
     purge_unused(&dir, &referenced)
 }
 
@@ -434,6 +474,20 @@ mod tests {
         assert!(tmp.0.join(&kept).exists());
         assert!(!tmp.0.join(&orphan_jpg).exists());
         assert!(!tmp.0.join(&orphan_svg).exists());
+    }
+
+    #[test]
+    fn copy_legacy_images_copies_every_file() {
+        let root = std::env::temp_dir().join(format!("swarmify-legacy-{}", std::process::id()));
+        let legacy = root.join("images");
+        let dest = root.join("dest");
+        fs::create_dir_all(&legacy).unwrap();
+        fs::create_dir_all(&dest).unwrap();
+        fs::write(legacy.join("a.png"), b"x").unwrap();
+        let copied = copy_legacy_images(&root, &dest).unwrap();
+        assert_eq!(copied, vec![dest.join("a.png")]);
+        assert!(dest.join("a.png").exists());
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
