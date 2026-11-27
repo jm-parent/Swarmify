@@ -66,7 +66,7 @@ Pas de NEEDS CLARIFICATION restant : les choix techniques sont tous posés ci-de
 
 **Décision** : les règles de groupe sont dans `src/canvas/groups/groupOps.ts`, en fonctions pures `BoardNode[] → BoardNode[]` avec erreurs typées (`GroupError`, codes listés dans contracts/group-api.md). `boardStore.ts` expose des actions fines qui font `checkpoint()` puis appliquent la fonction pure.
 
-**Rationale** : testable sans zustand ni React. La feature 2 (chat IA) appelle les actions du store, qui réutilisent les mêmes règles.
+**Rationale** : testable sans zustand ni React. Le chat IA appelle les actions du store, qui réutilisent les mêmes règles.
 
 **Alternative rejetée** : règles dans le store. Rejeté : impossible à réutiliser hors store, tests plus lourds.
 

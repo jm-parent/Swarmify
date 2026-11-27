@@ -1,6 +1,6 @@
 # Contrat : API de groupes d'agents
 
-Interface interne (TypeScript) entre le code de groupe et ses appelants : le store du board, l'interface, les tests, et la feature 2 (chat IA). Pas de réseau, pas de commande Tauri.
+Interface interne (TypeScript) entre le code de groupe et ses appelants : le store du board, l'interface, les tests, et le chat IA. Pas de réseau, pas de commande Tauri.
 
 Le module pur est `src/canvas/groups/groupOps.ts`. Le store expose les mêmes opérations sous forme d'actions (voir plus bas).
 
@@ -107,13 +107,13 @@ Exceptions :
 
 Les actions `deleteSelected` et `removeCard` appellent `deleteGroup` pour chaque cadre sélectionné ou supprimé.
 
-## Usage par la feature 2 (chat IA)
+## Usage par le chat IA
 
 Le chat ne manipule pas le DOM ni React Flow. Il appelle les actions du store, avec les identifiants.
 
 Exemple : « ajoute deux testeurs au groupe 2 ».
 
-1. Le chat résout « groupe 2 » en identifiant : `listGroups(nodes)[1].id`. La résolution appartient à la feature 2. Les noms ne sont pas uniques (FR-016), donc le chat doit s'appuyer sur la position dans `listGroups` ou demander une précision.
+1. Le chat résout « groupe 2 » en identifiant : `listGroups(nodes)[1].id`. La résolution appartient au chat IA. Les noms ne sont pas uniques (FR-016), donc le chat doit s'appuyer sur la position dans `listGroups` ou demander une précision.
 2. Pour chaque testeur à ajouter, on crée l'agent, puis `addAgentToGroup(agentId, groupId)`. Le tableau de nœuds est le même que celui de l'interface.
 3. Le compteur est relu par `countMembers`.
 

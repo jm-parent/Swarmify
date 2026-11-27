@@ -6,7 +6,7 @@
 
 ## Summary
 
-Un groupe est un cadre du canvas qui contient des agents. Techniquement, le groupe est un nœud React Flow de type `group` dans le même tableau de nœuds que les cartes, et l'appartenance d'un agent est son `parentId`. React Flow fait alors suivre les membres au déplacement du cadre (natif), et le plan ajoute seulement : le calcul d'appartenance au relâchement d'un agent, l'adaptation automatique du cadre, le compteur et une API pure réutilisable par la feature 2 (chat IA).
+Un groupe est un cadre du canvas qui contient des agents. Techniquement, le groupe est un nœud React Flow de type `group` dans le même tableau de nœuds que les cartes, et l'appartenance d'un agent est son `parentId`. React Flow fait alors suivre les membres au déplacement du cadre (natif), et le plan ajoute seulement : le calcul d'appartenance au relâchement d'un agent, l'adaptation automatique du cadre, le compteur et une API pure réutilisable par le chat IA.
 
 Les groupes sont stockés dans le JSON du board. Ils suivent donc le store par workspace de la feature workspaces, livrée avant (décision de clarification A). Aucun changement côté Rust.
 
@@ -58,7 +58,7 @@ specs/002-agent-groups/
 ├── data-model.md        # Groupe, appartenance, invariants (Phase 1)
 ├── quickstart.md        # Scénarios de validation (Phase 1)
 ├── contracts/
-│   └── group-api.md     # API de groupe, réutilisable par la feature 2
+│   └── group-api.md     # API de groupe, réutilisable par le chat IA
 ├── checklists/
 │   └── requirements.md
 └── tasks.md             # Créé par /speckit-tasks, pas par ce plan
@@ -85,7 +85,7 @@ src/canvas/
 
 Fichiers hors périmètre : `persistence.ts` et `persistence.rs` ne changent pas (le JSON est opaque côté Rust, et `persistence.ts` sérialise via `serializeBoard`). `AgentCard.tsx` ne change pas.
 
-**Structure Decision** : le code pur (règles de groupe) est dans `src/canvas/groups/`, sans dépendance à React ni à zustand. Le store et l'interface l'appellent. Cela permet à la feature 2 et aux tests unitaires d'utiliser les mêmes règles.
+**Structure Decision** : le code pur (règles de groupe) est dans `src/canvas/groups/`, sans dépendance à React ni à zustand. Le store et l'interface l'appellent. Cela permet au chat IA et aux tests unitaires d'utiliser les mêmes règles.
 
 ### Documentation à mettre à jour (exigence de la spec)
 

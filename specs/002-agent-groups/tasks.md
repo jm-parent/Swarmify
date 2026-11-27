@@ -129,7 +129,7 @@
 
 - [ ] T025 [US6] Compléter `src/canvas/boardStore.test.ts` : une action de groupe est annulable en une étape (`createGroup` puis `undo` retire le groupe) ; un `renameGroup` vide lève `EMPTY_NAME` et ne modifie pas `past`. Dépend de T024.
 
-**Point de contrôle** : la séquence scriptée passe, et la feature 2 peut s'appuyer sur `contracts/group-api.md`.
+**Point de contrôle** : la séquence scriptée passe, et le chat IA peut s'appuyer sur `contracts/group-api.md`.
 
 ---
 

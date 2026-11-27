@@ -2,11 +2,13 @@
 
 **Feature Branch**: `agents/feature-agent-groups-specification`
 
+**Feature**: 002 (`specs/002-agent-groups/`)
+
 **Created**: 2026-11-27
 
 **Status**: Draft
 
-**Input**: User description: "Groupes d'agents : une carte de canvas qui contient des agents et suit leurs déplacements, avec un nom et un compteur (total et actifs). Création depuis le menu clic droit ou la barre d'ajout. Le cadre s'adapte aux agents qu'il contient et reste redimensionnable. Les groupes sont stockés par workspace et exposent une API réutilisable par le chat IA (feature 2)."
+**Input**: User description: "Groupes d'agents : une carte de canvas qui contient des agents et suit leurs déplacements, avec un nom et un compteur (total et actifs). Création depuis le menu clic droit ou la barre d'ajout. Le cadre s'adapte aux agents qu'il contient et reste redimensionnable. Les groupes sont stockés par workspace et exposent une API réutilisable par le chat IA."
 
 ## Contexte
 
@@ -107,7 +109,7 @@ En tant qu'utilisateur, je veux supprimer un cadre sans risquer de perdre ou d'a
 
 ### User Story 6 - Piloter les groupes sans interface (Priority: P2)
 
-En tant que développeur de la feature de chat IA (feature 2), je veux créer, modifier et interroger les groupes par programme, pour que le chat puisse dire « ajoute deux testeurs au groupe 2 » sans passer par l'interface.
+En tant que développeur du chat IA, je veux créer, modifier et interroger les groupes par programme, pour que le chat puisse dire « ajoute deux testeurs au groupe 2 » sans passer par l'interface.
 
 **Why this priority**: Le chat IA est la feature suivante. Cette API doit exister avant, mais n'a pas de valeur visible pour l'utilisateur seul.
 
@@ -151,7 +153,7 @@ En tant que développeur de la feature de chat IA (feature 2), je veux créer, m
 - **FR-012**: Supprimer un groupe MUST retirer le cadre et libérer ses membres, sans les supprimer et sans arrêter leurs sessions.
 - **FR-013**: Les opérations sur un groupe (création, renommage, changement de rôle, déplacement, redimensionnement, ajout ou retrait d'un membre, suppression) MUST être annulables et refaisables, comme les autres modifications du board.
 - **FR-014**: Les groupes et leurs membres MUST être stockés avec les données du workspace actif. Ils MUST être restaurés à la réouverture de l'application et inclus dans l'export et l'import du board. Un board sans groupes MUST se charger sans erreur.
-- **FR-015**: Le système MUST exposer, indépendamment de l'interface, les opérations suivantes, réutilisables par la feature 2 :
+- **FR-015**: Le système MUST exposer, indépendamment de l'interface, les opérations suivantes, réutilisables par le chat IA :
   - a. créer un groupe (nom, rôle et position optionnels) et renvoyer son identifiant ;
   - b. renommer un groupe ;
   - c. changer le rôle d'un groupe ;
@@ -195,7 +197,7 @@ En tant que développeur de la feature de chat IA (feature 2), je veux créer, m
 ## Dependencies
 
 - **Workspaces** : le stockage par workspace suppose la feature workspaces ([2026-11-27-workspaces-design.md](../../docs/superpowers/specs/2026-11-27-workspaces-design.md)). Son design est sur `main`, mais son implémentation n'existe pas encore. Ordre de livraison décidé : les workspaces d'abord, puis les groupes, stockés directement par workspace (voir Clarifications). Les groupes ne sont donc pas stockés dans le board unique actuel.
-- **Feature 2 (chat IA)** : dépend de FR-015. Résoudre « groupe 2 » en identifiant relève de la feature 2, pas de celle-ci.
+- **Chat IA** : dépend de FR-015. Résoudre « groupe 2 » en identifiant relève du chat IA, pas de cette feature.
 - **Interface** : feature visuelle (canvas, menu radial, barre d'ajout). Passe `impeccable` après implémentation, avant la revue de code.
 - **Documentation** : `DESIGN.md` et `README.md` sont mis à jour avec la feature.
 
