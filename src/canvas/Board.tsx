@@ -35,8 +35,9 @@ import { NoteCard } from "./cards/NoteCard";
 import { KanbanCard } from "./cards/KanbanCard";
 import { AgentCard } from "./cards/AgentCard";
 import { ImageCard } from "./cards/ImageCard";
+import { GroupCard } from "./cards/GroupCard";
 
-const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard, image: ImageCard } satisfies NodeTypes;
+const nodeTypes = { note: NoteCard, kanban: KanbanCard, agent: AgentCard, image: ImageCard, group: GroupCard } satisfies NodeTypes;
 
 function isEditable(target: EventTarget | null) {
   return (
@@ -197,7 +198,7 @@ function BoardCanvas() {
     return [
       { id: "agent", label: "Agent", icon: Bot, onSelect: () => store.getState().addCard("agent", at) },
       { id: "note", label: "Note", icon: StickyNote, onSelect: () => store.getState().addCard("note", at) },
-      { id: "users", label: "Équipe", icon: Users },
+      { id: "group", label: "Groupe", icon: Users, onSelect: () => store.getState().createGroup(at) },
       {
         id: "image",
         label: "Image",
@@ -256,6 +257,9 @@ function BoardCanvas() {
       nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
       onNodeDragStart={checkpoint}
+      onNodeDragStop={(_event, _node, draggedNodes) =>
+        store.getState().settleMembership(draggedNodes.filter((n) => n.type === "agent").map((n) => n.id))
+      }
       deleteKeyCode={null}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
