@@ -161,19 +161,37 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
     clearSelection: () => set((s) => ({ nodes: s.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)) })),
 
     deleteSelected: () => {
-      if (!get().nodes.some((n) => n.selected)) return;
+      const { nodes } = get();
+      if (!nodes.some((n) => n.selected)) return;
       get().checkpoint();
-      set((s) => ({ nodes: s.nodes.filter((n) => !n.selected) }));
+      // Un cadre sélectionné libère ses membres sans les supprimer ; un membre sélectionné est supprimé par la sélection.
+      let next = nodes;
+      for (const group of nodes.filter((n) => n.type === "group" && n.selected)) {
+        next = groupOps.deleteGroup(next, group.id);
+      }
+      set({ nodes: next.filter((n) => !n.selected) });
     },
 
     removeCard: (id) => {
+      const target = get().nodes.find((n) => n.id === id);
       get().checkpoint();
-      set((s) => ({ nodes: s.nodes.filter((n) => n.id !== id) }));
+      set((s) => ({
+        nodes: target?.type === "group" ? groupOps.deleteGroup(s.nodes, id) : s.nodes.filter((n) => n.id !== id),
+      }));
     },
 
     copySelected: () => {
       set((s) => ({
-        clipboard: structuredClone(s.nodes.filter((n) => n.selected)),
+        // Un cadre n'est pas copiable (FR-017). Un agent copié reçoit sa position absolue et n'appartient à aucun groupe.
+        clipboard: structuredClone(
+          s.nodes
+            .filter((n) => n.selected && n.type !== "group")
+            .map((n) => {
+              const copy: BoardNode = { ...n, position: groupOps.absolutePosition(s.nodes, n) };
+              delete copy.parentId;
+              return copy;
+            }),
+        ),
       }));
     },
 
