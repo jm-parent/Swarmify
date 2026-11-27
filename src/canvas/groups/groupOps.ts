@@ -69,7 +69,7 @@ export function countMembers(nodes: BoardNode[], groupId: string): GroupCount {
 }
 
 // Position absolue d'une carte : un membre a une position relative à son cadre.
-function absolutePosition(nodes: BoardNode[], node: BoardNode): XYPosition {
+export function absolutePosition(nodes: BoardNode[], node: BoardNode): XYPosition {
   if (!node.parentId) return node.position;
   const parent = nodes.find((n) => n.id === node.parentId);
   if (!parent) return node.position;

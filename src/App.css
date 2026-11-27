@@ -26,6 +26,16 @@
   --danger: #e5483a;
   --danger-tint: #402018;
 
+  /* Couleurs des rôles de groupe (DESIGN.md, « Rôles de groupe »). */
+  --role-frontend: #e0a060;
+  --role-backend: #b48ce0;
+  --role-testers: #7fbf6a;
+  --role-reviewers: #7fa8e8;
+  --role-design: #e07a9a;
+  --role-docs: #6dbebe;
+  --role-security: #e0705a;
+  --role-general: #9a9a94;
+
   /* forme */
   --r-card: 6px;
   --r-panel: 16px;
@@ -300,8 +310,16 @@ body,
   background: transparent;
 }
 
-/* Libellé posé sur le trait, en haut à gauche : pastille de rôle (6 px), nom en capitales. */
-.group-header {
+.group-frame[data-role="frontend"] { --role-color: var(--role-frontend); }
+.group-frame[data-role="backend"] { --role-color: var(--role-backend); }
+.group-frame[data-role="testers"] { --role-color: var(--role-testers); }
+.group-frame[data-role="reviewers"] { --role-color: var(--role-reviewers); }
+.group-frame[data-role="design"] { --role-color: var(--role-design); }
+.group-frame[data-role="docs"] { --role-color: var(--role-docs); }
+.group-frame[data-role="security"] { --role-color: var(--role-security); }
+.group-frame[data-role="general"] { --role-color: var(--role-general); }
+
+/* Libellé posé sur le trait, en haut à gauche : pastille de rôle (6 px), nom en capitales. */.group-header {
   position: absolute;
   top: -10px;
   left: 12px;
@@ -314,8 +332,7 @@ body,
   white-space: nowrap;
 }
 
-.group-name::before {
-  content: "";
+.group-dot {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -323,6 +340,45 @@ body,
   border-radius: 50%;
   background: var(--role-color);
   vertical-align: middle;
+}
+
+.group-name {
+  width: 12ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  outline: none;
+}
+
+.group-role {
+  margin-left: 8px;
+  padding: 0 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-pill);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: 11px/1.6 var(--font-ui);
+  color-scheme: dark;
+}
+
+.group-name:focus-visible,
+.group-role:focus-visible {
+  outline: 1px solid var(--text-secondary);
+  outline-offset: 2px;
+}
+
+/* Compteur du groupe : mono gris, chiffres tabulaires (DESIGN.md, « Méta de statut »). */
+.group-count {
+  margin-left: 8px;
+  font: 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
 }
 
 .add-bar {

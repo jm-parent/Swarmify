@@ -11,6 +11,7 @@ import {
   renameGroup,
   settleMembership,
   listGroups,
+  resizeGroup,
 } from "./groupOps";
 
 const terminal = { shell: "powershell", preset: "copilot", cwd: "", sessionId: "s" } as const;
@@ -145,6 +146,63 @@ describe("groupOps", () => {
     ];
     const grown = addAgentToGroup(nodes, "a2", "gA");
     expect(grown.find((n) => n.id === "f1")?.parentId).toBeUndefined();
+  });
+
+  it("agrandit le cadre pour englober un membre ajouté, avec la marge", () => {
+    const nodes = [
+      group("gA", { x: 0, y: 0 }),
+      agent("a1", { x: 100, y: 100 }, "idle", "gA"),
+      agent("a2", { x: 900, y: 100 }),
+    ];
+    const grown = addAgentToGroup(nodes, "a2", "gA").find((n) => n.id === "gA");
+    expect(grown?.width).toBe(1408);
+    expect(grown?.position.x).toBe(76);
+  });
+
+  it("réduit le cadre au retrait d'un membre sans descendre sous la taille minimale", () => {
+    const nodes = [
+      group("gA", { x: 0, y: 0 }),
+      agent("a1", { x: 100, y: 100 }, "idle", "gA"),
+      agent("a2", { x: 900, y: 100 }, "idle", "gA"),
+    ];
+    const shrunk = removeAgentFromGroup(nodes, "a2").find((n) => n.id === "gA");
+    expect(shrunk?.width).toBe(608);
+    expect(shrunk?.height).toBe(440);
+  });
+
+  it("garde une taille choisie à la main comme minimum après le départ d'un membre", () => {
+    const nodes = [
+      group("gA", { x: 0, y: 0 }),
+      agent("a1", { x: 100, y: 100 }, "idle", "gA"),
+      agent("a2", { x: 900, y: 100 }),
+    ];
+    const resized = resizeGroup(nodes, "gA", { width: 900, height: 700 });
+    const withSecond = addAgentToGroup(resized, "a2", "gA");
+    const shrunk = removeAgentFromGroup(withSecond, "a2").find((n) => n.id === "gA");
+    expect(shrunk?.data.group?.minSize).toEqual({ width: 900, height: 700 });
+    expect(shrunk?.width).toBe(900);
+    expect(shrunk?.height).toBe(700);
+  });
+
+  it("borne le redimensionnement à la boîte des membres", () => {
+    const nodes = [group("gA", { x: 0, y: 0 }), agent("a1", { x: 100, y: 100 }, "idle", "gA")];
+    const bounded = resizeGroup(nodes, "gA", { width: 100, height: 100 }).find((n) => n.id === "gA");
+    expect(bounded?.width).toBe(608);
+    expect(bounded?.height).toBe(440);
+  });
+
+  it("déplace le cadre quand un membre déborde en haut et à gauche, sans bouger le membre", () => {
+    const nodes = [
+      group("gA", { x: 500, y: 500 }),
+      agent("a1", { x: -100, y: -100 }, "idle", "gA"),
+      agent("a2", { x: 2000, y: 2000 }),
+    ];
+    const fitted = addAgentToGroup(nodes, "a2", "gA");
+    const frame = fitted.find((n) => n.id === "gA");
+    const member = fitted.find((n) => n.id === "a1");
+    expect(frame?.position).toEqual({ x: 376, y: 376 });
+    expect(frame!.position.x + member!.position.x).toBe(400);
+    expect(frame!.position.y + member!.position.y).toBe(400);
   });
 
   it("retire un agent avec removeAgentFromGroup et garde sa position absolue", () => {
