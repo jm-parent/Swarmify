@@ -107,7 +107,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   useEffect(() => {
     const term = new Terminal({
       fontFamily: "Cascadia Mono, Consolas, monospace",
-      fontSize: 13,
+      fontSize: 12,
       cursorBlink: true,
       scrollback: 5000,
       theme: { background: "#0c0c08" },
