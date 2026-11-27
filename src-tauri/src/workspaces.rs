@@ -1,7 +1,14 @@
-use std::path::Path;
+use std::fs;
+use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
+use tauri::{AppHandle, Manager, State};
+
+use crate::images::{app_images_dir, copy_legacy_images, remove_files};
+use crate::persistence::{self, Db};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -91,7 +98,7 @@ pub fn rename(conn: &Connection, id: &str, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn mark_opened(conn: &Connection, id: &str, now: i64) -> Result<(), String> {
+pub fn set_last_opened(conn: &Connection, id: &str, now: i64) -> Result<(), String> {
     conn.execute(
         "UPDATE workspaces SET last_opened_at = ?2 WHERE id = ?1",
         params![id, now],
@@ -107,6 +114,113 @@ pub fn delete(conn: &Connection, id: &str) -> Result<(), String> {
     tx.execute("DELETE FROM workspaces WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())
+}
+
+fn now_ms() -> Result<i64, String> {
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis() as i64)
+}
+
+fn workspace_dir(app: &AppHandle, id: &str) -> Result<PathBuf, String> {
+    let root = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(root.join("workspaces").join(id))
+}
+
+fn remove_workspace_dir(app: &AppHandle, id: &str) {
+    if let Ok(dir) = workspace_dir(app, id) {
+        let _ = fs::remove_dir_all(dir);
+    }
+}
+
+#[tauri::command]
+pub fn list_workspaces(db: State<Db>) -> Result<Vec<Workspace>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    list(&conn)
+}
+
+#[tauri::command]
+pub fn create_workspace(
+    app: AppHandle,
+    db: State<Db>,
+    id: String,
+    folder: String,
+    name: String,
+) -> Result<Workspace, String> {
+    valid_id(&id)?;
+    validate_folder(&folder)?;
+    let name = validate_name(&name)?;
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let adopting = list(&conn)?.is_empty() && persistence::load_legacy(&conn)?.is_some();
+    let ws = Workspace {
+        id: id.clone(),
+        name,
+        folder,
+        created_at: now_ms()?,
+        last_opened_at: None,
+        folder_exists: true,
+    };
+
+    let copied = if adopting {
+        let copy = app_images_dir(&app, &id).and_then(|dest| copy_legacy_images(&app_data, &dest));
+        match copy {
+            Ok(copied) => copied,
+            Err(e) => {
+                remove_workspace_dir(&app, &id);
+                return Err(e);
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    if let Err(e) = persistence::create_with_legacy(&conn, &ws) {
+        if adopting {
+            remove_workspace_dir(&app, &id);
+        }
+        return Err(e);
+    }
+
+    if adopting {
+        let legacy: Vec<PathBuf> = copied
+            .iter()
+            .filter_map(|path| path.file_name())
+            .map(|file| app_data.join("images").join(file))
+            .collect();
+        remove_files(&legacy);
+    }
+    Ok(ws)
+}
+
+#[tauri::command]
+pub fn rename_workspace(db: State<Db>, id: String, name: String) -> Result<(), String> {
+    valid_id(&id)?;
+    let name = validate_name(&name)?;
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    rename(&conn, &id, &name)
+}
+
+#[tauri::command]
+pub fn mark_opened(db: State<Db>, id: String) -> Result<(), String> {
+    valid_id(&id)?;
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    set_last_opened(&conn, &id, now_ms()?)
+}
+
+#[tauri::command]
+pub fn delete_workspace(app: AppHandle, db: State<Db>, id: String) -> Result<(), String> {
+    valid_id(&id)?;
+    {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        delete(&conn, &id)?;
+    }
+    match fs::remove_dir_all(workspace_dir(&app, &id)?) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[cfg(test)]
@@ -174,7 +288,7 @@ mod tests {
         insert(&conn, &ws(id, "Projet", &std::env::temp_dir().to_string_lossy())).unwrap();
 
         rename(&conn, id, "Nouveau").unwrap();
-        mark_opened(&conn, id, 5).unwrap();
+        set_last_opened(&conn, id, 5).unwrap();
         let listed = list(&conn).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].name, "Nouveau");

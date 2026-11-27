@@ -16,6 +16,11 @@ fn main() {
             "save_sanitized_svg",
             "copy_image_file",
             "purge_unused_images",
+            "list_workspaces",
+            "create_workspace",
+            "rename_workspace",
+            "mark_opened",
+            "delete_workspace",
         ])),
     )
     .expect("échec de la génération des permissions Tauri");
