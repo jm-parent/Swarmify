@@ -1,5 +1,5 @@
 import { Panel, useReactFlow } from "@xyflow/react";
-import { useBoardStore } from "./boardStore";
+import { useBoardApi, useBoardStore } from "./boardStore";
 import { exportBoard, importBoard } from "./persistence";
 import type { CardType } from "./types";
 
@@ -12,6 +12,7 @@ function reportError(err: unknown) {
 }
 
 export function AddBar() {
+  const store = useBoardApi();
   const { screenToFlowPosition } = useReactFlow();
   const addCard = useBoardStore((s) => s.addCard);
 
@@ -25,8 +26,8 @@ export function AddBar() {
       <button type="button" onClick={() => add("note")}>+ Note</button>
       <button type="button" onClick={() => add("kanban")}>+ Kanban</button>
       <button type="button" onClick={() => add("agent")}>+ Agent</button>
-      <button type="button" onClick={() => exportBoard().catch(reportError)}>Exporter</button>
-      <button type="button" onClick={() => importBoard().catch(reportError)}>Importer</button>
+      <button type="button" onClick={() => exportBoard(store).catch(reportError)}>Exporter</button>
+      <button type="button" onClick={() => importBoard(store).catch(reportError)}>Importer</button>
     </Panel>
   );
 }

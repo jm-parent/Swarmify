@@ -3,7 +3,6 @@ import type { NodeProps } from "@xyflow/react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { homeDir } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useBoardStore } from "../boardStore";
 import type { BoardNode } from "../types";
@@ -23,6 +22,7 @@ const SHELLS: { value: ShellKind; label: string }[] = [
 export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const removeCard = useBoardStore((s) => s.removeCard);
+  const folder = useBoardStore((s) => s.folder);
   const config = data.terminal as TerminalConfig;
   const cliStatus = useCliStatus();
   const [confirmClose, setConfirmClose] = useState(false);
@@ -93,7 +93,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
           if (failed) setError(`Processus terminé (code ${code})`);
         }),
       ];
-      const cwd = cfg.cwd || (await homeDir());
+      const cwd = folder;
       const spec = buildLaunch(cfg, resume);
       await ptySpawn(session, spec, cwd, term.cols, term.rows);
       setRunning(true);
@@ -172,7 +172,6 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   }, []);
 
   const openFolder = async () => {
-    const folder = config.cwd || (await homeDir());
     await openPath(folder).catch((err) => setError(String(err)));
   };
 
@@ -222,13 +221,6 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
             </option>
           ))}
         </select>
-        <input
-          className="agent-cwd"
-          placeholder="Dossier (vide = dossier utilisateur)"
-          value={config.cwd}
-          disabled={running}
-          onChange={(e) => setConfig({ cwd: e.currentTarget.value })}
-        />
       </div>
       <div className="agent-toolbar nodrag">
         <button type="button" onClick={() => launch(true)}>

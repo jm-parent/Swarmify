@@ -53,8 +53,172 @@ body,
 }
 
 .app {
+  position: relative;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
+}
+
+.workspace-view {
+  position: absolute;
+  inset: 0;
+}
+
+/* Le sélecteur de workspace occupe le coin haut-gauche : la barre d'ajout passe en dessous. */
+.workspace-view .add-bar {
+  margin-top: 56px;
+}
+
+.workspace-switcher {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+}
+
+.workspace-current,
+.workspace-menu button {
+  font: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.workspace-current {
+  padding: 4px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  font-weight: 600;
+}
+
+.workspace-current:hover {
+  background: var(--bg-surface-2);
+}
+
+.workspace-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: var(--r-panel);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.workspace-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspace-row.active .workspace-item {
+  color: var(--accent);
+}
+
+.workspace-item,
+.workspace-new,
+.workspace-delete {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--r-card);
+  background: transparent;
+  text-align: left;
+}
+
+.workspace-item:hover,
+.workspace-new:hover,
+.workspace-delete:hover {
+  background: var(--bg-surface-2);
+}
+
+.workspace-delete {
+  color: var(--danger);
+}
+
+.workspace-missing {
+  color: var(--danger);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.workspace-rename {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-card);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  padding: 24px;
+}
+
+/* Style B de la maquette : un reflet violet balaie le titre en continu. */
+.home-title {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 46px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-align: center;
+  background: linear-gradient(100deg, #1f2937 35%, #7c3aed 50%, #1f2937 65%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tb-sweep 3s linear infinite;
+}
+
+@keyframes tb-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-title {
+    animation: none;
+  }
+}
+
+.home-action {
+  padding: 6px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.home-action:hover {
+  background: var(--bg-surface-2);
+}
+
+.home-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
 }
 
 .zoom-bar {
@@ -533,7 +697,6 @@ body,
 }
 
 .agent-toolbar select,
-.agent-toolbar input,
 .agent-toolbar button {
   padding: 3px 8px;
   border: 1px solid var(--border-strong);
@@ -547,11 +710,6 @@ body,
 .agent-toolbar select option {
   background: var(--bg-surface);
   color: var(--text-primary);
-}
-
-.agent-toolbar .agent-cwd {
-  flex: 1;
-  min-width: 140px;
 }
 
 .agent-toolbar button:disabled,
