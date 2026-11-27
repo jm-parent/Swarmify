@@ -155,4 +155,24 @@ mod tests {
         assert_eq!(load_legacy(&conn).unwrap(), None);
         assert!(!create_with_legacy(&conn, &ws(B, "B", "C:\\b")).unwrap());
     }
+
+    #[test]
+    fn create_with_legacy_does_not_adopt_when_workspace_exists() {
+        let conn = memory_db();
+        conn.execute("INSERT INTO board (id, data, updated_at) VALUES (1, '{\"legacy\":true}', 0)", []).unwrap();
+        insert(&conn, &ws(A, "A", "C:\\a")).unwrap();
+        assert!(!create_with_legacy(&conn, &ws(B, "B", "C:\\b")).unwrap());
+        assert_eq!(read_board(&conn, B).unwrap(), None);
+        assert_eq!(load_legacy(&conn).unwrap().as_deref(), Some("{\"legacy\":true}"));
+    }
+
+    #[test]
+    fn create_with_legacy_rolls_back_when_adoption_fails() {
+        let conn = memory_db();
+        conn.execute("INSERT INTO board (id, data, updated_at) VALUES (1, '{\"legacy\":true}', 0)", []).unwrap();
+        conn.execute("INSERT INTO workspace_board (workspace_id, data, updated_at) VALUES (?1, '{}', 0)", params![A]).unwrap();
+        assert!(create_with_legacy(&conn, &ws(A, "A", "C:\\a")).is_err());
+        assert_eq!(load_legacy(&conn).unwrap().as_deref(), Some("{\"legacy\":true}"));
+        assert!(!workspaces::exists(&conn, A).unwrap());
+    }
 }
