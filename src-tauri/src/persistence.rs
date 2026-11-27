@@ -7,8 +7,20 @@ use tauri::{AppHandle, Manager, State};
 
 pub struct Db(pub Mutex<Connection>);
 
-const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS board (
+pub(crate) const SCHEMA: &str = "CREATE TABLE IF NOT EXISTS board (
     id INTEGER PRIMARY KEY CHECK (id = 1),
+    data TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    folder TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    last_opened_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS workspace_board (
+    workspace_id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
     updated_at INTEGER NOT NULL
 );";

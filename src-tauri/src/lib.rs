@@ -1,6 +1,7 @@
 mod images;
 mod persistence;
 mod pty;
+mod workspaces;
 
 use tauri::Manager;
 
