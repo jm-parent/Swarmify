@@ -3,8 +3,6 @@ import type { NodeProps } from "@xyflow/react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { homeDir } from "@tauri-apps/api/path";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { useBoardStore } from "../boardStore";
 import type { BoardNode } from "../types";
 import { buildLaunch, type AgentPreset, type ShellKind, type TerminalConfig } from "../terminal/launch";
@@ -23,6 +21,7 @@ const SHELLS: { value: ShellKind; label: string }[] = [
 export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const removeCard = useBoardStore((s) => s.removeCard);
+  const folder = useBoardStore((s) => s.folder);
   const config = data.terminal as TerminalConfig;
   const cliStatus = useCliStatus();
   const [confirmClose, setConfirmClose] = useState(false);
@@ -93,7 +92,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
           if (failed) setError(`Processus terminé (code ${code})`);
         }),
       ];
-      const cwd = cfg.cwd || (await homeDir());
+      const cwd = folder;
       const spec = buildLaunch(cfg, resume);
       await ptySpawn(session, spec, cwd, term.cols, term.rows);
       setRunning(true);
@@ -108,7 +107,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
   useEffect(() => {
     const term = new Terminal({
       fontFamily: "Cascadia Mono, Consolas, monospace",
-      fontSize: 13,
+      fontSize: 12,
       cursorBlink: true,
       scrollback: 5000,
       theme: { background: "#0c0c08" },
@@ -171,11 +170,6 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openFolder = async () => {
-    const folder = config.cwd || (await homeDir());
-    await openPath(folder).catch((err) => setError(String(err)));
-  };
-
   const closeAgent = () => {
     if (running) setConfirmClose(true);
     else removeCard(id);
@@ -222,30 +216,9 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
             </option>
           ))}
         </select>
-        <input
-          className="agent-cwd"
-          placeholder="Dossier (vide = dossier utilisateur)"
-          value={config.cwd}
-          disabled={running}
-          onChange={(e) => setConfig({ cwd: e.currentTarget.value })}
-        />
       </div>
       <div className="agent-toolbar nodrag">
-        <button type="button" onClick={() => launch(true)}>
-          {running ? "Relancer" : "Reprendre"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const fresh = { ...config, sessionId: crypto.randomUUID() };
-            setConfig({ sessionId: fresh.sessionId });
-            void launch(false, fresh);
-          }}
-        >
-          Nouvelle session
-        </button>
-        <button type="button" disabled={!running} onClick={stop}>Arrêter</button>
-        <button type="button" onClick={() => void openFolder()}>Dossier</button>
+        {!running && <button type="button" onClick={() => launch(true)}>Lancer</button>}
         {error && <span className="agent-error">{error}</span>}
       </div>
       <div ref={hostRef} className="nodrag nowheel terminal-host" />

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useBoardStore } from "./boardStore";
+import { createBoardStore } from "./boardStore";
 
-const { getState, setState } = useBoardStore;
+const store = createBoardStore("ws-test", "C:\\projet", []);
+const { getState, setState } = store;
 
 const imageAsset = {
   file: "a.png",

@@ -12,7 +12,8 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, Image as ImageIcon, Layers, Globe, StickyNote, Users } from "lucide-react";
 import "@xyflow/react/dist/style.css";
-import { useBoardStore } from "./boardStore";
+import { useBoardApi, useBoardStore, type BoardStore } from "./boardStore";
+import { useWorkspaceStore } from "../workspaces/workspaceStore";
 import {
   basename,
   errorMessage,
@@ -55,16 +56,21 @@ function showImportErrors(errors: string[]) {
   if (errors.length > 0) useImportNotice.getState().show(errors);
 }
 
+// Tous les boards ouverts restent montés (display: none) : leurs écouteurs globaux ne doivent agir que sur le board actif.
+function isActiveBoard(store: BoardStore): boolean {
+  return useWorkspaceStore.getState().activeId === store.getState().workspaceId;
+}
+
 // Après un collage, chaque image reçoit sa propre copie en arrière-plan. La carte pointe déjà sur le fichier d'origine
 // et le patch n'ajoute aucun point d'annulation. Seuls les états encore sur le fichier d'origine sont mis à jour : une carte
 // supprimée ou une image remplacée entre-temps n'est pas touchée.
-function duplicatePastedImages(ids: string[]) {
+function duplicatePastedImages(store: BoardStore, ids: string[]) {
   for (const id of ids) {
-    const original = useBoardStore.getState().nodes.find((n) => n.id === id)?.data.image;
+    const original = store.getState().nodes.find((n) => n.id === id)?.data.image;
     if (!original) continue;
-    void duplicateImageAsset(original.file)
+    void duplicateImageAsset(store.getState().workspaceId, original.file)
       .then((copy) => {
-        useBoardStore.getState().patchImageAsset(id, original.file, {
+        store.getState().patchImageAsset(id, original.file, {
           ...original,
           file: copy.file,
           format: copy.format,
@@ -77,22 +83,22 @@ function duplicatePastedImages(ids: string[]) {
   }
 }
 
-function importFiles(paths: string[], origin: XYPosition): Promise<void> {
-  return importImageFiles(paths, spreadPositions(origin, paths.length)).then(
+function importFiles(store: BoardStore, paths: string[], origin: XYPosition): Promise<void> {
+  return importImageFiles(store, paths, spreadPositions(origin, paths.length)).then(
     showImportErrors,
     (err: unknown) => showImportErrors([errorMessage(err)]),
   );
 }
 
 // Les cartes choisies au sélecteur sont centrées sur le centre de la vue : la taille n'est connue qu'après mesure.
-async function importPickedFiles(paths: string[], centre: XYPosition): Promise<string[]> {
+async function importPickedFiles(store: BoardStore, paths: string[], centre: XYPosition): Promise<string[]> {
   const origins = spreadPositions(centre, paths.length);
   const errors: string[] = [];
   for (const [index, path] of paths.entries()) {
     try {
-      const { asset, size } = await importImageAsset(path);
+      const { asset, size } = await importImageAsset(store.getState().workspaceId, path);
       const origin = origins[index];
-      useBoardStore
+      store
         .getState()
         .addImageCard(asset, { x: origin.x - size.width / 2, y: origin.y - size.height / 2 }, size);
     } catch (err) {
@@ -103,11 +109,11 @@ async function importPickedFiles(paths: string[], centre: XYPosition): Promise<s
 }
 
 // Annuler le sélecteur renvoie null : rien à faire.
-async function pickImageFiles(centre: XYPosition): Promise<void> {
+async function pickImageFiles(store: BoardStore, centre: XYPosition): Promise<void> {
   try {
     const paths = await open({ multiple: true, filters: IMAGE_DIALOG_FILTERS });
     if (!paths || paths.length === 0) return;
-    showImportErrors(await importPickedFiles(paths, centre));
+    showImportErrors(await importPickedFiles(store, paths, centre));
   } catch (err) {
     showImportErrors([errorMessage(err)]);
   }
@@ -122,6 +128,7 @@ export function Board() {
 }
 
 function BoardCanvas() {
+  const store = useBoardApi();
   const nodes = useBoardStore((s) => s.nodes);
   const onNodesChange = useBoardStore((s) => s.onNodesChange);
   const checkpoint = useBoardStore((s) => s.checkpoint);
@@ -136,19 +143,18 @@ function BoardCanvas() {
   // ou un import déjà en cours ne relance pas l'encodage.
   const pasteFromClipboard = useCallback(
     async (isRepeat: boolean) => {
-      const store = useBoardStore.getState();
-      if (store.clipboard.length > 0) {
-        duplicatePastedImages(store.paste());
+      if (store.getState().clipboard.length > 0) {
+        duplicatePastedImages(store, store.getState().paste());
         return;
       }
       if (isRepeat || pasteImageBusy.current) return;
       pasteImageBusy.current = true;
       try {
-        const imported: ImportedImage | null = await importClipboardImage();
+        const imported: ImportedImage | null = await importClipboardImage(store.getState().workspaceId);
         if (!imported) return;
         const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
         const { width, height } = imported.size;
-        useBoardStore.getState().addImageCard(
+        store.getState().addImageCard(
           imported.asset,
           { x: center.x - width / 2, y: center.y - height / 2 },
           imported.size,
@@ -159,7 +165,7 @@ function BoardCanvas() {
         pasteImageBusy.current = false;
       }
     },
-    [screenToFlowPosition],
+    [screenToFlowPosition, store],
   );
 
   // Les fichiers déposés depuis l'Explorateur arrivent en pixels physiques, relatifs à la fenêtre.
@@ -169,10 +175,10 @@ function BoardCanvas() {
     getCurrentWebview()
       .onDragDropEvent((event) => {
         const payload = event.payload;
-        if (payload.type !== "drop") return;
+        if (payload.type !== "drop" || !isActiveBoard(store)) return;
         const ratio = window.devicePixelRatio;
         const origin = screenToFlowPosition({ x: payload.position.x / ratio, y: payload.position.y / ratio });
-        void importFiles(payload.paths, origin);
+        void importFiles(store, payload.paths, origin);
       })
       .then((stop) => {
         if (disposed) stop();
@@ -183,33 +189,32 @@ function BoardCanvas() {
       disposed = true;
       unlisten?.();
     };
-  }, [screenToFlowPosition]);
+  }, [screenToFlowPosition, store]);
 
   const menuItems = useMemo<RadialItem[]>(() => {
     if (!menu) return [];
     const at = menu.flow;
     return [
-      { id: "agent", label: "Agent", icon: Bot, onSelect: () => useBoardStore.getState().addCard("agent", at) },
-      { id: "note", label: "Note", icon: StickyNote, onSelect: () => useBoardStore.getState().addCard("note", at) },
+      { id: "agent", label: "Agent", icon: Bot, onSelect: () => store.getState().addCard("agent", at) },
+      { id: "note", label: "Note", icon: StickyNote, onSelect: () => store.getState().addCard("note", at) },
       { id: "users", label: "Équipe", icon: Users },
       {
         id: "image",
         label: "Image",
         icon: ImageIcon,
         onSelect: () =>
-          void pickImageFiles(screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })),
+          void pickImageFiles(store, screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })),
       },
       { id: "layers", label: "Calques", icon: Layers },
       { id: "globe", label: "Web", icon: Globe },
     ];
-  }, [menu, screenToFlowPosition]);
+  }, [menu, screenToFlowPosition, store]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       // Space sur le bouton Supprimer / Remplacer d'une carte manquante l'active au lieu de déclencher le pan.
       if (e.code === "Space" && e.target instanceof HTMLButtonElement && e.target.closest(".image-missing")) return;
-      if (isEditable(e.target)) return;
-      const store = useBoardStore.getState();
+      if (isEditable(e.target) || !isActiveBoard(store)) return;
       const mod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
 
@@ -217,17 +222,17 @@ function BoardCanvas() {
         e.preventDefault();
         setSpacePressed(true);
       } else if (mod && key === "c") {
-        store.copySelected();
+        store.getState().copySelected();
       } else if (mod && key === "v") {
         void pasteFromClipboard(e.repeat);
       } else if (mod && (key === "y" || (key === "z" && e.shiftKey))) {
-        store.redo();
+        store.getState().redo();
       } else if (mod && key === "z") {
-        store.undo();
+        store.getState().undo();
       } else if (e.key === "Delete") {
-        store.deleteSelected();
+        store.getState().deleteSelected();
       } else if (e.key === "Escape") {
-        store.clearSelection();
+        store.getState().clearSelection();
       } else {
         return;
       }
@@ -242,7 +247,7 @@ function BoardCanvas() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [pasteFromClipboard]);
+  }, [pasteFromClipboard, store]);
 
   return (
     <ReactFlow

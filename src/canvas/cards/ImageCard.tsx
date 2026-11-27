@@ -15,13 +15,14 @@ export function ImageCard({ id, data, selected }: NodeProps<BoardNode>) {
   const [missing, setMissing] = useState(false);
   const removeCard = useBoardStore((s) => s.removeCard);
   const replaceImage = useBoardStore((s) => s.replaceImage);
+  const workspaceId = useBoardStore((s) => s.workspaceId);
 
   useEffect(() => {
     setSrc(null);
     setMissing(false);
     if (!file) return;
     let cancelled = false;
-    imageSrc(file).then(
+    imageSrc(workspaceId, file).then(
       (url) => {
         if (!cancelled) setSrc(url);
       },
@@ -32,14 +33,14 @@ export function ImageCard({ id, data, selected }: NodeProps<BoardNode>) {
     return () => {
       cancelled = true;
     };
-  }, [file]);
+  }, [file, workspaceId]);
 
   // Annuler le sélecteur ne fait rien ; un échec d'import passe par la notification.
   async function replaceFile() {
     try {
       const path = await open({ multiple: false, filters: IMAGE_DIALOG_FILTERS });
       if (typeof path !== "string") return;
-      const { asset } = await importImageAsset(path);
+      const { asset } = await importImageAsset(workspaceId, path);
       replaceImage(id, asset);
     } catch (err) {
       useImportNotice.getState().show([errorMessage(err)]);

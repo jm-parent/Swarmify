@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Panel, useReactFlow } from "@xyflow/react";
-import { useBoardStore } from "./boardStore";
+import { useBoardApi, type BoardStore } from "./boardStore";
 import { PROVIDERS, useCliStatus, type Provider } from "./providers";
 
 // Carte shell PowerShell qui lance la commande d'installation dès son démarrage.
-function openInstallCard(p: Provider, position: { x: number; y: number }) {
-  const store = useBoardStore.getState();
-  const id = store.addCard("agent", position);
-  store.updateCard(id, {
+function openInstallCard(store: BoardStore, p: Provider, position: { x: number; y: number }) {
+  const id = store.getState().addCard("agent", position);
+  store.getState().updateCard(id, {
     title: `Installer ${p.label}`,
     terminal: { shell: "powershell", preset: "shell", cwd: "", sessionId: crypto.randomUUID() },
     startCommand: p.install,
@@ -16,6 +15,7 @@ function openInstallCard(p: Provider, position: { x: number; y: number }) {
 
 // Barre verticale à droite : un logo par fournisseur, pastille verte si installé.
 export function ProviderRail() {
+  const store = useBoardApi();
   const status = useCliStatus();
   const { screenToFlowPosition } = useReactFlow();
   const [hovered, setHovered] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function ProviderRail() {
               onClick={() => {
                 if (installed || !status) return;
                 const center = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-                openInstallCard(p, center);
+                openInstallCard(store, p, center);
               }}
             >
               <Logo size={20} />

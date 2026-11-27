@@ -22,6 +22,11 @@
     "allow-save-image-bytes",
     "allow-save-sanitized-svg",
     "allow-copy-image-file",
-    "allow-purge-unused-images"
+    "allow-purge-unused-images",
+    "allow-list-workspaces",
+    "allow-create-workspace",
+    "allow-rename-workspace",
+    "allow-mark-opened",
+    "allow-delete-workspace"
   ]
 }

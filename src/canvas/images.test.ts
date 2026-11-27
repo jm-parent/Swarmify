@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { createBoardStore } from "./boardStore";
 import {
   assertSvgRoot,
   DEFAULT_SVG_SIZE,
   duplicateImageAsset,
   fitImageSize,
+  imageSrc,
   imagesFolderFor,
   importImageAsset,
   importImageFiles,
@@ -124,25 +126,39 @@ describe("images", () => {
   });
 
   it("traduit en français l'erreur de lecture d'un SVG importé", async () => {
-    await expect(importImageAsset("C:\\images\\a.svg")).rejects.toThrow("Lecture du SVG impossible : permission refusée");
+    await expect(importImageAsset("ws-1", "C:\\images\\a.svg")).rejects.toThrow("Lecture du SVG impossible : permission refusée");
   });
 
   it("refuse un import sans position pour chaque fichier, avant tout appel système", async () => {
-    await expect(importImageFiles(["a.png", "b.png"], [{ x: 0, y: 0 }])).rejects.toThrow("positions manquantes");
+    const store = createBoardStore("ws-1", "C:\\projet", []);
+    await expect(importImageFiles(store, ["a.png", "b.png"], [{ x: 0, y: 0 }])).rejects.toThrow("positions manquantes");
   });
 
   it("transmet le chemin stocké à import_image et rejette un SVG illisible", async () => {
-    const uuid = "0f1e2d3c-4b5a-4968-8777-a6b5c4d3e2f1";
+    const uuid = "11111111-2222-3333-4444-555555555555";
     vi.mocked(invoke).mockClear();
 
-    await expect(duplicateImageAsset(`${uuid}.svg`)).rejects.toThrow("Lecture du SVG impossible");
-    expect(invoke).toHaveBeenCalledWith("import_image", { sourcePath: `C:\\data\\images\\${uuid}.svg` });
+    await expect(duplicateImageAsset("ws-1", `${uuid}.svg`)).rejects.toThrow("Lecture du SVG impossible");
+    expect(invoke).toHaveBeenCalledWith("import_image", {
+      workspaceId: "ws-1",
+      sourcePath: `C:\\data\\images\\${uuid}.svg`,
+    });
   });
 
   it("refuse un nom hors images/ avant tout appel de copie", async () => {
     vi.mocked(invoke).mockClear();
 
-    await expect(duplicateImageAsset("..\\secret.png")).rejects.toThrow("Nom de fichier image invalide");
+    await expect(duplicateImageAsset("ws-1", "..\\secret.png")).rejects.toThrow("Nom de fichier image invalide");
     expect(invoke).not.toHaveBeenCalledWith("import_image", expect.anything());
+  });
+
+  it("résout le dossier d'images de chaque workspace séparément", async () => {
+    const file = "11111111-2222-3333-4444-555555555555.png";
+    vi.mocked(invoke).mockClear();
+
+    await imageSrc("ws-a", file);
+    await imageSrc("ws-b", file);
+    expect(invoke).toHaveBeenCalledWith("images_dir", { workspaceId: "ws-a" });
+    expect(invoke).toHaveBeenCalledWith("images_dir", { workspaceId: "ws-b" });
   });
 });
