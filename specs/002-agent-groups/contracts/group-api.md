@@ -96,12 +96,13 @@ Exceptions :
 
 | Action | Équivalent pur |
 |---|---|
-| `createGroup(position): string` | `createGroup` (renvoie l'id) |
+| `createGroup(options?)` | `groupOps.createGroup` (options : `name`, `role`, `position`, tous optionnels) |
 | `renameGroup(id, name)` | `renameGroup` |
 | `setGroupRole(id, role)` | `setGroupRole` |
 | `addAgentToGroup(agentId, groupId)` | `addAgentToGroup` |
 | `removeAgentFromGroup(agentId)` | `removeAgentFromGroup` |
 | `deleteGroup(id)` | `deleteGroup` |
+| `refitGroupOf(nodeId)` | `fitGroup` sur le cadre du nœud, après redimensionnement d'un membre (pas de checkpoint : le point est pris au début du geste) |
 | `resizeGroup(id, width, height)` | `resizeGroup` (au relâchement du redimensionnement, sans checkpoint : voir ci-dessus) |
 | `settleMembership(agentIds)` | `settleMembership`, appelée depuis `onNodeDragStop`. Pas de `checkpoint()` : le point d'annulation est pris au début du glissement, par `onNodeDragStart`. |
 

@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { NodeChangeset, XYPosition } from "@xyflow/react";
-import type { BoardNode, CardType, ImageAsset } from "./types";
+import * as groupOps from "./groups/groupOps";
+import type { BoardNode, CardType, GroupRole, ImageAsset } from "./types";
 
 const HISTORY_LIMIT = 100;
 const PASTE_OFFSET = 40;
@@ -49,6 +50,15 @@ function seedNodes(): BoardNode[] {
   return [note, kanban];
 }
 
+// Recalcule les cadres dont un membre vient de partir ou de changer de taille.
+function refitGroups(nodes: BoardNode[], groupIds: Set<string>): BoardNode[] {
+  let next = nodes;
+  for (const id of groupIds) {
+    if (next.some((n) => n.id === id && n.type === "group")) next = groupOps.fitGroup(next, id);
+  }
+  return next;
+}
+
 export interface BoardState {
   workspaceId: string;
   folder: string;
@@ -70,6 +80,16 @@ export interface BoardState {
   paste: () => string[];
   undo: () => void;
   redo: () => void;
+  // Actions de groupe (contrat : specs/002-agent-groups/contracts/group-api.md).
+  createGroup: (options?: { name?: string; role?: GroupRole; position?: XYPosition }) => string;
+  renameGroup: (id: string, name: string) => void;
+  setGroupRole: (id: string, role: GroupRole) => void;
+  addAgentToGroup: (agentId: string, groupId: string) => void;
+  removeAgentFromGroup: (agentId: string) => void;
+  deleteGroup: (id: string) => void;
+  resizeGroup: (id: string, width: number, height: number) => void;
+  settleMembership: (agentIds: string[]) => void;
+  refitGroupOf: (nodeId: string) => void;
 }
 
 export type BoardStore = StoreApi<BoardState>;
@@ -151,19 +171,46 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
     clearSelection: () => set((s) => ({ nodes: s.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)) })),
 
     deleteSelected: () => {
-      if (!get().nodes.some((n) => n.selected)) return;
+      const { nodes } = get();
+      if (!nodes.some((n) => n.selected)) return;
       get().checkpoint();
-      set((s) => ({ nodes: s.nodes.filter((n) => !n.selected) }));
+      const selectedGroups = new Set(nodes.filter((n) => n.type === "group" && n.selected).map((n) => n.id));
+      // Un membre d'un cadre supprimé est libéré, jamais supprimé (FR-012), même s'il est sélectionné.
+      const released = new Set(
+        nodes.filter((n) => n.selected && n.parentId !== undefined && selectedGroups.has(n.parentId)).map((n) => n.id),
+      );
+      const doomed = new Set(nodes.filter((n) => n.selected && !released.has(n.id)).map((n) => n.id));
+      const parents = new Set(
+        nodes.filter((n) => doomed.has(n.id) && n.parentId !== undefined).map((n) => n.parentId as string),
+      );
+      let next = nodes;
+      for (const id of selectedGroups) next = groupOps.deleteGroup(next, id);
+      next = next.filter((n) => !doomed.has(n.id)).map((n) => (released.has(n.id) ? { ...n, selected: false } : n));
+      set({ nodes: refitGroups(next, parents) });
     },
 
     removeCard: (id) => {
+      const target = get().nodes.find((n) => n.id === id);
       get().checkpoint();
-      set((s) => ({ nodes: s.nodes.filter((n) => n.id !== id) }));
+      set((s) => {
+        if (target?.type === "group") return { nodes: groupOps.deleteGroup(s.nodes, id) };
+        const parents = new Set(target?.parentId !== undefined ? [target.parentId] : []);
+        return { nodes: refitGroups(s.nodes.filter((n) => n.id !== id), parents) };
+      });
     },
 
     copySelected: () => {
       set((s) => ({
-        clipboard: structuredClone(s.nodes.filter((n) => n.selected)),
+        // Un cadre n'est pas copiable (FR-017). Un agent copié reçoit sa position absolue et n'appartient à aucun groupe.
+        clipboard: structuredClone(
+          s.nodes
+            .filter((n) => n.selected && n.type !== "group")
+            .map((n) => {
+              const copy: BoardNode = { ...n, position: groupOps.absolutePosition(s.nodes, n) };
+              delete copy.parentId;
+              return copy;
+            }),
+        ),
       }));
     },
 
@@ -201,6 +248,61 @@ export function createBoardStore(workspaceId: string, folder: string, nodes?: Bo
         past: [...past, nodes],
         future: future.slice(1),
       });
+    },
+
+    // Le pur calcule d'abord : une erreur (nom vide, rôle inconnu) ne laisse aucun point d'annulation.
+    createGroup: (options = {}) => {
+      const { nodes, id } = groupOps.createGroup(get().nodes, options);
+      get().checkpoint();
+      set({ nodes });
+      return id;
+    },
+
+    renameGroup: (id, name) => {
+      const nodes = groupOps.renameGroup(get().nodes, id, name);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    setGroupRole: (id, role) => {
+      const nodes = groupOps.setGroupRole(get().nodes, id, role);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    addAgentToGroup: (agentId, groupId) => {
+      const nodes = groupOps.addAgentToGroup(get().nodes, agentId, groupId);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    removeAgentFromGroup: (agentId) => {
+      const nodes = groupOps.removeAgentFromGroup(get().nodes, agentId);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    deleteGroup: (id) => {
+      const nodes = groupOps.deleteGroup(get().nodes, id);
+      get().checkpoint();
+      set({ nodes });
+    },
+
+    // Pas de checkpoint : le point d'annulation est pris au début du geste (onResizeStart), voir contracts/group-api.md.
+    resizeGroup: (id, width, height) => {
+      set({ nodes: groupOps.resizeGroup(get().nodes, id, { width, height }) });
+    },
+
+    // Pas de checkpoint : le point est pris au début du glissement (onNodeDragStart).
+    settleMembership: (agentIds) => {
+      set({ nodes: groupOps.settleMembership(get().nodes, agentIds) });
+    },
+
+    // Pas de checkpoint : le point d'annulation est déjà pris au début du geste (CardFrame, onResizeStart).
+    refitGroupOf: (nodeId) => {
+      const parent = get().nodes.find((n) => n.id === nodeId)?.parentId;
+      if (parent === undefined) return;
+      set({ nodes: refitGroups(get().nodes, new Set([parent])) });
     },
   }));
 }

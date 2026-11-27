@@ -131,9 +131,9 @@ Règles :
 
 ### Cadre de groupe
 
-- Rectangle arrondi (8 px) autour des cartes, trait de 1,5 px de la couleur du rôle.
-- Libellé sur le trait, en haut à gauche : pastille de rôle, nom en capitales grasses, compteur et statut en mono gris.
-- Titre de zone en mono centré au-dessus, facultatif.
+- Rectangle arrondi (8 px) autour des cartes, trait de 1,5 px de la couleur du rôle. Taille minimale : la taille choisie à la main, ou 600 × 440 px pour un groupe vide. Le cadre englobe ses membres avec une marge de 24 px, sans descendre sous cette taille.
+- Libellé sur le trait, en haut à gauche : pastille de rôle, nom en capitales grasses, compteur en mono gris `N · M actif` ou `N · M actifs` (singulier pour 0 et 1). N = membres, M = membres en cours d'exécution.
+- Titre de zone en mono centré au-dessus, facultatif. Il qualifie une zone du canvas, il est distinct du nom du groupe.
 
 ### Barre de commande
 
