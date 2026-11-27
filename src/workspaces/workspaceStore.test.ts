@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
+import { serializeBoard } from "../canvas/boardFile";
 import { attachAutosave, loadWorkspaceNodes } from "../canvas/persistence";
 import {
   createWorkspace,
@@ -12,6 +14,7 @@ import { cleanName, pickStartupWorkspace, useWorkspaceStore } from "./workspaceS
 
 vi.mock("./workspaceApi");
 vi.mock("../canvas/persistence");
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => null) }));
 
 function ws(overrides: Partial<Workspace> & { id: string }): Workspace {
   return {
@@ -137,5 +140,73 @@ describe("workspaceStore", () => {
     expect(getState().error).toBe("disque bloqué");
     expect(getState().workspaces.map((w) => w.id)).toEqual(["a"]);
     expect(getState().open.a).toBeDefined();
+  });
+
+  it("remove du workspace actif active le plus récent restant", async () => {
+    vi.mocked(deleteWorkspace).mockResolvedValue();
+    setState({ workspaces: [ws({ id: "a", createdAt: 1 }), ws({ id: "b", createdAt: 2 })] });
+    await getState().activate("a");
+
+    await getState().remove("a");
+
+    expect(getState().activeId).toBe("b");
+    expect(markOpened).toHaveBeenLastCalledWith("b");
+  });
+
+  it("remove du dernier workspace actif laisse activeId à null", async () => {
+    vi.mocked(deleteWorkspace).mockResolvedValue();
+    setState({ workspaces: [ws({ id: "a" })] });
+    await getState().activate("a");
+
+    await getState().remove("a");
+
+    expect(getState().activeId).toBeNull();
+    expect(getState().workspaces).toEqual([]);
+  });
+
+  describe("horodatage d'ouverture et autosave", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("activate mémorise l'ouverture : le remove suivant choisit le workspace ouvert le plus récemment", async () => {
+      vi.mocked(deleteWorkspace).mockResolvedValue();
+      setState({
+        workspaces: [ws({ id: "a", createdAt: 1 }), ws({ id: "b", createdAt: 2 }), ws({ id: "c", createdAt: 3 })],
+      });
+      vi.setSystemTime(100);
+      await getState().activate("a");
+      vi.setSystemTime(200);
+      await getState().activate("b");
+
+      await getState().remove("b");
+
+      expect(getState().activeId).toBe("a");
+    });
+
+    it("remove en échec sauvegarde les modifications faites juste avant l'échec", async () => {
+      vi.stubGlobal("window", new EventTarget());
+      const actual = await vi.importActual<typeof import("../canvas/persistence")>("../canvas/persistence");
+      vi.mocked(attachAutosave).mockImplementation(actual.attachAutosave);
+      vi.mocked(invoke).mockResolvedValue(null);
+      vi.mocked(deleteWorkspace).mockRejectedValue(new Error("disque bloqué"));
+      setState({ workspaces: [ws({ id: "a" })] });
+      await getState().activate("a");
+      const store = getState().open.a.store;
+      store.getState().updateCard(store.getState().nodes[0].id, { title: "Modifié" });
+
+      await getState().remove("a");
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(invoke).toHaveBeenCalledWith("save_board", {
+        workspaceId: "a",
+        data: serializeBoard(store.getState().nodes),
+      });
+    });
   });
 });

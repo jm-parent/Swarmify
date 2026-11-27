@@ -101,6 +101,8 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
       // La suppression a échoué : le workspace existe toujours, on reprend la sauvegarde.
       if (entry) {
         set((s) => ({ open: { ...s.open, [id]: { store: entry.store, detach: attachAutosave(entry.store) } } }));
+        // Les modifications faites avant l'échec ont été abandonnées au détachement : nouvelle référence pour les resauvegarder.
+        entry.store.setState({ nodes: [...entry.store.getState().nodes] });
       }
       set({ error: errorMessage(err) });
       return;
@@ -135,6 +137,10 @@ export const useWorkspaceStore = create<WorkspaceState>()((set, get) => ({
       }
       set({ activeId: id, error: null });
       await markOpened(id);
+      const openedAt = Date.now();
+      set((s) => ({
+        workspaces: s.workspaces.map((w) => (w.id === id ? { ...w, lastOpenedAt: openedAt } : w)),
+      }));
     } catch (err) {
       set({ error: errorMessage(err) });
     }
