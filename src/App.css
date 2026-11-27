@@ -64,11 +64,6 @@ body,
   inset: 0;
 }
 
-/* Le sélecteur de workspace occupe le coin haut-gauche : la barre d'ajout passe en dessous. */
-.workspace-view .add-bar {
-  margin-top: 56px;
-}
-
 .workspace-switcher {
   position: absolute;
   top: 8px;
@@ -279,8 +274,7 @@ body,
   color: var(--text-secondary);
 }
 
-.zoom-bar button,
-.add-bar button {
+.zoom-bar button {
   padding: 4px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--r-pill);
@@ -290,19 +284,37 @@ body,
   cursor: pointer;
 }
 
-.zoom-bar button:hover,
-.add-bar button:hover {
+.zoom-bar button:hover {
   background: var(--bg-surface-2);
 }
 
 .add-bar {
   display: flex;
+  flex-direction: column;
   gap: 6px;
   padding: 6px;
   border-radius: var(--r-pill);
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   backdrop-filter: blur(20px);
+}
+
+.add-bar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.add-bar button:hover {
+  background: var(--bg-surface-2);
 }
 
 .radial-backdrop {

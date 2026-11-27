@@ -1,4 +1,5 @@
 import { Panel, useReactFlow } from "@xyflow/react";
+import { Bot, Download, Kanban, StickyNote, Upload } from "lucide-react";
 import { useBoardApi, useBoardStore } from "./boardStore";
 import { exportBoard, importBoard } from "./persistence";
 import type { CardType } from "./types";
@@ -22,12 +23,22 @@ export function AddBar() {
   };
 
   return (
-    <Panel position="top-left" className="add-bar">
-      <button type="button" onClick={() => add("note")}>+ Note</button>
-      <button type="button" onClick={() => add("kanban")}>+ Kanban</button>
-      <button type="button" onClick={() => add("agent")}>+ Agent</button>
-      <button type="button" onClick={() => exportBoard(store).catch(reportError)}>Exporter</button>
-      <button type="button" onClick={() => importBoard(store).catch(reportError)}>Importer</button>
+    <Panel position="center-left" className="add-bar">
+      <button type="button" aria-label="Ajouter une note" title="Ajouter une note" onClick={() => add("note")}>
+        <StickyNote size={18} />
+      </button>
+      <button type="button" aria-label="Ajouter un kanban" title="Ajouter un kanban" onClick={() => add("kanban")}>
+        <Kanban size={18} />
+      </button>
+      <button type="button" aria-label="Ajouter un agent" title="Ajouter un agent" onClick={() => add("agent")}>
+        <Bot size={18} />
+      </button>
+      <button type="button" aria-label="Exporter le board" title="Exporter le board" onClick={() => exportBoard(store).catch(reportError)}>
+        <Download size={18} />
+      </button>
+      <button type="button" aria-label="Importer un board" title="Importer un board" onClick={() => importBoard(store).catch(reportError)}>
+        <Upload size={18} />
+      </button>
     </Panel>
   );
 }
