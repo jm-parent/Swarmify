@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { NodeChangeset, XYPosition } from "@xyflow/react";
-import type { BoardNode, CardType } from "./types";
+import type { BoardNode, CardType, ImageAsset } from "./types";
 
 const HISTORY_LIMIT = 100;
 const PASTE_OFFSET = 40;
@@ -55,12 +55,15 @@ export interface BoardState {
   onNodesChange: (changes: NodeChangeset<BoardNode>) => void;
   checkpoint: () => void;
   addCard: (type: CardType, position: XYPosition) => string;
+  addImageCard: (asset: ImageAsset, position: XYPosition, size: { width: number; height: number }) => string;
+  replaceImage: (id: string, asset: ImageAsset) => void;
+  patchImageAsset: (id: string, fromFile: string, asset: ImageAsset) => void;
   updateCard: (id: string, patch: Partial<BoardNode["data"]>) => void;
   deleteSelected: () => void;
   removeCard: (id: string) => void;
   clearSelection: () => void;
   copySelected: () => void;
-  paste: () => void;
+  paste: () => string[];
   undo: () => void;
   redo: () => void;
 }
@@ -85,6 +88,50 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
       nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), { ...card, selected: true }],
     }));
     return card.id;
+  },
+
+  addImageCard: (asset, position, size) => {
+    get().checkpoint();
+    const id = crypto.randomUUID();
+    const card: BoardNode = {
+      id,
+      type: "image",
+      position,
+      width: size.width,
+      height: size.height,
+      selected: true,
+      data: { title: asset.originalName, status: "idle", image: asset },
+    };
+    set((s) => ({
+      nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), card],
+    }));
+    return id;
+  },
+
+  // Remplace l'image d'une carte existante (position et taille inchangées). Annulable.
+  replaceImage: (id, asset) => {
+    if (!get().nodes.some((n) => n.id === id)) return;
+    get().checkpoint();
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, title: asset.originalName, image: asset } } : n,
+      ),
+    }));
+  },
+
+  // Change seulement l'asset d'une carte (copie en arrière-plan). Pas de point d'annulation : le collage reste annulable tel quel.
+  // Les instantanés de l'historique sont mis à jour aussi, sinon annuler ramènerait le fichier d'origine.
+  // Seul un état dont l'image est encore fromFile est mis à jour : un remplacement fait entre-temps n'est pas écrasé.
+  patchImageAsset: (id, fromFile, asset) => {
+    const withAsset = (nodes: BoardNode[]) =>
+      nodes.some((n) => n.id === id && n.data.image?.file === fromFile)
+        ? nodes.map((n) => (n.id === id && n.data.image?.file === fromFile ? { ...n, data: { ...n.data, image: asset } } : n))
+        : nodes;
+    set((s) => ({
+      nodes: withAsset(s.nodes),
+      past: s.past.map(withAsset),
+      future: s.future.map(withAsset),
+    }));
   },
 
   updateCard: (id, patch) =>
@@ -113,7 +160,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
 
   paste: () => {
     const { clipboard } = get();
-    if (clipboard.length === 0) return;
+    if (clipboard.length === 0) return [];
     get().checkpoint();
     const pasted = clipboard.map((n) => ({
       ...structuredClone(n),
@@ -124,6 +171,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     set((s) => ({
       nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), ...pasted],
     }));
+    return pasted.map((n) => n.id);
   },
 
   undo: () => {

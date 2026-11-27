@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-images-dir"
+description = "Enables the images_dir command without any pre-configured scope."
+commands.allow = ["images_dir"]
+
+[[permission]]
+identifier = "deny-images-dir"
+description = "Denies the images_dir command without any pre-configured scope."
+commands.deny = ["images_dir"]

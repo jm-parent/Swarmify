@@ -11,6 +11,7 @@ Chaque agent tourne dans une carte terminal réelle (PTY). Les CLI sont héberg�
   - Agent / Terminal (ConPTY, PowerShell, CMD, WSL2, Git Bash)
   - Note / Markdown
   - Kanban / Checklist
+  - Image
 - **Supervision** : bandeau qui indique les agents actifs, en arrière-plan ou en attente, avec centrage de la caméra au clic.
 - **Sauvegarde automatique** du board, restauré au lancement.
 - **Raccourcis Windows** : Ctrl+Z / Ctrl+Y / Ctrl+C / Ctrl+V / Ctrl+F / Suppr / Échap.
@@ -74,5 +75,8 @@ Le board est sauvegardé localement. L'app est pensée pour un seul utilisateur,
 ## Limites connues
 
 - Usage personnel pour l'instant : pas d'installeur signé ni d'auto-update en V1.
-- Cartes Git et Image prévues en V2.
+- Cartes Git prévues en V2.
+- Carte Image : taille maximale de 20 Mo par image.
+- Carte Image : formats acceptés PNG, JPEG, GIF (animé), WebP et SVG (assaini).
+- Carte Image : l'export JSON crée un dossier `<nom>-images/` à côté du fichier exporté.
 - Pas de support macOS ni mobile.

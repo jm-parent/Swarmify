@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-purge-unused-images"
+description = "Enables the purge_unused_images command without any pre-configured scope."
+commands.allow = ["purge_unused_images"]
+
+[[permission]]
+identifier = "deny-purge-unused-images"
+description = "Denies the purge_unused_images command without any pre-configured scope."
+commands.deny = ["purge_unused_images"]

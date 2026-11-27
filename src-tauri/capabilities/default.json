@@ -7,6 +7,7 @@
     "core:default",
     "opener:default",
     "dialog:default",
+    "clipboard-manager:allow-read-image",
     "allow-load-board",
     "allow-save-board",
     "allow-write-text-file",
@@ -15,6 +16,12 @@
     "allow-pty-write",
     "allow-pty-resize",
     "allow-pty-kill",
-    "allow-detect-clis"
+    "allow-detect-clis",
+    "allow-images-dir",
+    "allow-import-image",
+    "allow-save-image-bytes",
+    "allow-save-sanitized-svg",
+    "allow-copy-image-file",
+    "allow-purge-unused-images"
   ]
 }
