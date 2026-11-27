@@ -3,7 +3,6 @@ import type { NodeProps } from "@xyflow/react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { useBoardStore } from "../boardStore";
 import type { BoardNode } from "../types";
 import { buildLaunch, type AgentPreset, type ShellKind, type TerminalConfig } from "../terminal/launch";
@@ -171,10 +170,6 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openFolder = async () => {
-    await openPath(folder).catch((err) => setError(String(err)));
-  };
-
   const closeAgent = () => {
     if (running) setConfirmClose(true);
     else removeCard(id);
@@ -223,21 +218,7 @@ export function AgentCard({ id, data, selected }: NodeProps<BoardNode>) {
         </select>
       </div>
       <div className="agent-toolbar nodrag">
-        <button type="button" onClick={() => launch(true)}>
-          {running ? "Relancer" : "Reprendre"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const fresh = { ...config, sessionId: crypto.randomUUID() };
-            setConfig({ sessionId: fresh.sessionId });
-            void launch(false, fresh);
-          }}
-        >
-          Nouvelle session
-        </button>
-        <button type="button" disabled={!running} onClick={stop}>Arrêter</button>
-        <button type="button" onClick={() => void openFolder()}>Dossier</button>
+        {!running && <button type="button" onClick={() => launch(true)}>Lancer</button>}
         {error && <span className="agent-error">{error}</span>}
       </div>
       <div ref={hostRef} className="nodrag nowheel terminal-host" />
