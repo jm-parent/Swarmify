@@ -185,4 +185,28 @@ mod tests {
         assert!(list(&conn).unwrap().is_empty());
         assert!(!exists(&conn, id).unwrap());
     }
+
+    #[test]
+    fn delete_removes_board_rows() {
+        let id = "550e8400-e29b-41d4-a716-446655440000";
+        let conn = memory_db();
+        insert(&conn, &ws(id, "Projet", &std::env::temp_dir().to_string_lossy())).unwrap();
+        conn.execute(
+            "INSERT INTO workspace_board (workspace_id, data, updated_at) VALUES (?1, '{}', 0)",
+            params![id],
+        )
+        .unwrap();
+
+        delete(&conn, id).unwrap();
+
+        let board_rows: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM workspace_board WHERE workspace_id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(board_rows, 0);
+        assert!(!exists(&conn, id).unwrap());
+    }
 }
